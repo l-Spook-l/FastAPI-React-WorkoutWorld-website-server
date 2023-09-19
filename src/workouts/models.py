@@ -1,60 +1,53 @@
 # Ну это модели
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON, TIMESTAMP, Boolean
-from sqlalchemy.orm import relationship
-
-from fastapi_users.db import SQLAlchemyBaseUserTable
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.database import Base
+# from src.auth.models import User
 
 
 class Workout(Base):
-    __tablename__ = "workout"
+    __tablename__ = "workout_table"
 
-    id = Column(Integer, primary_key=True, index=True, unique=True)
-    name = Column(String)
-    user_id = Column(JSON)
-    description = Column(String(length=1000))
-    created_at = Column(TIMESTAMP, default=datetime.utcnow())
-    difficulty = Column(String)
-    timer = Column(DateTime)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, unique=True)
+    name: Mapped[str] = mapped_column(String(length=256))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_table.id"))
+    description: Mapped[str] = mapped_column(String(length=1000))
+    created_at: Mapped[TIMESTAMP] = mapped_column(TIMESTAMP, default=datetime.utcnow())
+    difficulty: Mapped[str] = mapped_column(String(length=50))
+    timer: Mapped[DateTime] = mapped_column(DateTime)
+
+    user: Mapped["User"] = relationship(back_populates="workout")
+    exercises: Mapped[list["Exercise"]] = relationship(back_populates="workout")
 
 
 class Exercise(Base):
-    __tablename__ = "exercise"
+    __tablename__ = "exercise_table"
 
-    id = Column(Integer, primary_key=True, index=True, unique=True)
-    workout_id = Column()
-    description = Column(String(length=500))
-    number_of_sets = Column(Integer)
-    maximum_repetitions = Column(Integer)
-    rest_time = Column()
-    weight = Column(Integer)
-    timer = Column()
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, unique=True)
+    workout_id: Mapped[int] = mapped_column(Integer, ForeignKey("workout_table.id"))
+    description: Mapped[str] = mapped_column(String(length=500))
+    number_of_sets: Mapped[int] = mapped_column(Integer)
+    maximum_repetitions: Mapped[int] = mapped_column(Integer)
+    rest_time: Mapped[DateTime] = mapped_column(DateTime)
+    weight: Mapped[int] = mapped_column(Integer)
+    timer: Mapped[DateTime] = mapped_column(DateTime)
+
+    workout: Mapped["Workout"] = relationship(back_populates="exercise")
+    set: Mapped[list["Set"]] = relationship(back_populates="exercise")
 
 
 class Set(Base):
-    __tablename__ = "set"
+    __tablename__ = "set_table"
 
-    id = Column(Integer, primary_key=True, index=True, unique=True)
-    exercises_id = Column()
-    user_id = Column()
-    count = Column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, unique=True)
+    exercises_id: Mapped[int] = mapped_column(Integer, ForeignKey("exercise_table.id"))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user_table.id"))
+    count: Mapped[int] = mapped_column(Integer)
 
-    # id = Column(Integer, primary_key=True, index=True, unique=True)
-    # email = Column(String, nullable=False)
-    # first_name = Column(String, nullable=False)
-    # second_name = Column(String, nullable=False)
-    # phone = Column(Integer, nullable=False)
-    # username = Column(String, nullable=False)
-    # registered_at = Column(TIMESTAMP, default=datetime.utcnow())
-    # role_id = Column(Integer, ForeignKey("role.id"))
-    #
-    # # из класса просто для простоты вынесем сюда
-    # hashed_password = Column(String(length=1024), nullable=False)
-    # is_active = Column(Boolean, default=True, nullable=False)
-    # is_superuser = Column(Boolean, default=False, nullable=False)
-    # is_verified = Column(Boolean, default=False, nullable=False)
-    #
-    # role = relationship(Role)
+    exercises: Mapped["Exercise"] = relationship(back_populates="set")
+    user: Mapped["User"] = relationship(back_populates="set")
