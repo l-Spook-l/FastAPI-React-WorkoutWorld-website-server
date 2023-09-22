@@ -32,9 +32,12 @@ class Exercise(Base):
     description: Mapped[str] = mapped_column(String(length=500))
     number_of_sets: Mapped[int]
     maximum_repetitions: Mapped[int]
-    rest_time: Mapped[datetime]
+    rest_time: Mapped[str] = mapped_column(String(length=999))
     weight: Mapped[int]
-    timer: Mapped[datetime]
+    timer: Mapped[str] = mapped_column(String(length=999))
+
+    # video: Mapped[str]
+    # photo: Mapped[str]
 
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise")
