@@ -19,9 +19,10 @@ class Workout(Base):
     description: Mapped[str] = mapped_column(String(length=1000))
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow())
     difficulty: Mapped[str] = mapped_column(String(length=50))
+    total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="workout")
-    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout")
+    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all")
 
 
 class Exercise(Base):
@@ -32,12 +33,9 @@ class Exercise(Base):
     description: Mapped[str] = mapped_column(String(length=500))
     number_of_sets: Mapped[int]
     maximum_repetitions: Mapped[int]
-    rest_time: Mapped[str] = mapped_column(String(length=999))
-    weight: Mapped[int]
-    timer: Mapped[str] = mapped_column(String(length=999))
-
-    # video: Mapped[str]
-    # photo: Mapped[str]
+    rest_time: Mapped[str] = mapped_column(String(length=99))
+    video: Mapped[str | None]
+    photo: Mapped[str | None]
 
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise")
@@ -50,6 +48,7 @@ class Set(Base):
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("user_table.id"))
     count: Mapped[int]
+    weight: Mapped[int]
 
     exercise: Mapped["Exercise"] = relationship(back_populates="set")
     user: Mapped["User"] = relationship(back_populates="set")
