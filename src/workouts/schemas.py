@@ -9,6 +9,7 @@ class WorkoutCreate(BaseModel):
     user_id: int
     description: str
     difficulty: str
+    total_time: str
 
 
 class ExerciseCreate(BaseModel):
@@ -17,14 +18,15 @@ class ExerciseCreate(BaseModel):
     number_of_sets: int
     maximum_repetitions: int
     rest_time: str
-    weight: int = Field(ge=0)  # число должно быть >= 0
-    timer: str
+    video: str
+    photo: str
 
 
 class SetCreate(BaseModel):
     exercise_id: int
     user_id: int
     count: int
+    weight: int = Field(ge=0)  # число должно быть >= 0
 
 
 class SetUpdate(BaseModel):
