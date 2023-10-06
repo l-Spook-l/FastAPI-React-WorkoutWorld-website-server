@@ -49,6 +49,7 @@ async def get_workouts(
         difficulty: str = Query(None, description="Filter by difficulty"),
         skip: int = Query(0, description="Number of records to skip"),
         limit: int = Query(12, description="Number of records to return"),
+        page: int = Query(1, description="Page number"),
         session: AsyncSession = Depends(get_async_session)):
     try:
         # Создаем базовый запрос
@@ -92,6 +93,18 @@ async def get_workout(workout_id: int, session: AsyncSession = Depends(get_async
     return {
         'status': 'success',
         'data': workout,
+        'details': None,
+    }
+
+
+@router.get("/user-created-workouts")
+async def get_my_created_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
+    query = select(Workout).filter(Workout.user_id == user_id)
+    result = await session.execute(query)
+    my_created_workouts = result.mappings().all()
+    return {
+        'status': 'success',
+        'data': my_created_workouts,
         'details': None,
     }
 
