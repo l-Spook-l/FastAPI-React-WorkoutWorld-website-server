@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
@@ -18,15 +18,16 @@ router = APIRouter(
 )
 
 
-@router.post("/create workout")
+@router.post("/create_workout")
 async def add_workout(new_workout: WorkoutCreate, session: AsyncSession = Depends(get_async_session)):
-    stat = insert(Workout).values(**new_workout.dict())
-    await session.execute(stat)
+    stat = insert(Workout).values(**new_workout.dict()).returning(Workout.id)
+    result = await session.execute(stat)
+    id = result.scalar()
     await session.commit()
-    return {"status": "success"}
+    return {"status": "success", 'workout_ID': id}
 
 
-@router.post("/create exercise")
+@router.post("/create_exercise")
 async def add_exercise(new_exercise: ExerciseCreate, session: AsyncSession = Depends(get_async_session)):
     stat = insert(Exercise).values(**new_exercise.dict())
     await session.execute(stat)
@@ -34,7 +35,7 @@ async def add_exercise(new_exercise: ExerciseCreate, session: AsyncSession = Dep
     return {"status": "success"}
 
 
-@router.post("/create set")
+@router.post("/create_set")
 async def add_set(new_set: SetCreate, session: AsyncSession = Depends(get_async_session)):
     stat = insert(Set).values(**new_set.dict())
     await session.execute(stat)
@@ -47,7 +48,7 @@ async def get_workouts(
         name: str = Query(None, description="Filter by name"),
         difficulty: str = Query(None, description="Filter by difficulty"),
         skip: int = Query(0, description="Number of records to skip"),
-        limit: int = Query(10, description="Number of records to return"),
+        limit: int = Query(12, description="Number of records to return"),
         session: AsyncSession = Depends(get_async_session)):
     try:
         # Создаем базовый запрос
@@ -62,12 +63,17 @@ async def get_workouts(
         query = query.limit(limit).offset(skip)
         # делаем запрос в БД
         result = await session.execute(query)
+        # подсчет общего количества записей
+        total_count = await session.scalar(select(func.count()).select_from(Workout))
         # получаем список из словарей
         workouts = result.mappings().all()
 
         return {
             'status': 'success',
             'data': workouts,
+            'skip': skip,
+            'limit': limit,
+            'total_count': total_count,
             'details': None,
         }
     except Exception:
@@ -107,14 +113,11 @@ async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get
 @router.patch("/update{set_id}")
 async def update_set(set_id: int, count: int, session: AsyncSession = Depends(get_async_session)):
     query = update(Set).filter(Set.id == set_id).values(count=count)
-    if query is None:
-        raise HTTPException(status_code=404, detail="Set not found")
 
     await session.execute(query)
     await session.commit()
 
     return {
         'status': 'success',
-        # 'data': set,
         'details': None,
     }
