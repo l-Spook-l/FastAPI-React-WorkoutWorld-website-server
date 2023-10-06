@@ -13,6 +13,7 @@ class WorkoutCreate(BaseModel):
 
 
 class ExerciseCreate(BaseModel):
+    name: str
     workout_id: int
     description: str
     number_of_sets: int
