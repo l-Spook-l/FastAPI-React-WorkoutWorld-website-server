@@ -112,7 +112,6 @@ async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_asyn
 @router.get("/sets")
 async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get_async_session)):
     query = select(Set).filter(Set.exercise_id == exercise).filter(Set.user_id == user)
-    # query = select(Set).filter(Set.id == exercise)
     print('query', query)
     result = await session.execute(query)
     sets = result.mappings().all()
@@ -126,8 +125,8 @@ async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get
 @router.patch("/workout/update/{workout_id}")
 async def update_workout(workout_id: int, name: str, description: str, difficulty: str, total_time: str,
                          session: AsyncSession = Depends(get_async_session)):
-    query = (update(Workout).filter(Workout.id == workout_id)
-             .values(name=name, description=description, difficulty=difficulty, total_time=total_time))
+    query = (update(Workout).filter(Workout.id == workout_id).values(name=name, description=description,
+                                                                     difficulty=difficulty, total_time=total_time))
 
     await session.execute(query)
     await session.commit()
@@ -139,8 +138,13 @@ async def update_workout(workout_id: int, name: str, description: str, difficult
 
 
 @router.patch("/exercise/update/{exercise_id}")
-async def update_exercise(exercise_id: int, count: int, session: AsyncSession = Depends(get_async_session)):
-    query = update(Exercise).filter(Exercise.id == exercise_id).values(count=count)
+async def update_exercise(exercise_id: int, name: str, description: str, number_of_sets: int,
+                          maximum_repetitions: int, rest_time: int, video: str, photo: str,
+                          session: AsyncSession = Depends(get_async_session)):
+    query = update(Exercise).filter(Exercise.id == exercise_id).values(name=name, description=description,
+                                                                       number_of_sets=number_of_sets,
+                                                                       maximum_repetitions=maximum_repetitions,
+                                                                       rest_time=rest_time, video=video, photo=photo)
 
     await session.execute(query)
     await session.commit()
@@ -152,8 +156,8 @@ async def update_exercise(exercise_id: int, count: int, session: AsyncSession = 
 
 
 @router.patch("/set/update/{set_id}")
-async def update_set(set_id: int, count: int, session: AsyncSession = Depends(get_async_session)):
-    query = update(Set).filter(Set.id == set_id).values(count=count)
+async def update_set(set_id: int, count: int, weight: int, session: AsyncSession = Depends(get_async_session)):
+    query = update(Set).filter(Set.id == set_id).values(count=count, weight=weight)
 
     await session.execute(query)
     await session.commit()
