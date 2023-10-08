@@ -86,7 +86,7 @@ async def get_workouts(
 
 
 @router.get("/workout/{workout_id}")  # изменить путь !!!!!!!!!!!!
-async def get_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
     query = select(Workout).filter(Workout.id == workout_id).options(selectinload(Workout.exercise))
     result = await session.execute(query)
     workout = result.mappings().one()
@@ -97,14 +97,14 @@ async def get_workout(workout_id: int, session: AsyncSession = Depends(get_async
     }
 
 
-@router.get("/user-created-workouts")
-async def get_my_created_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
+@router.get("/user-workouts")
+async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
     query = select(Workout).filter(Workout.user_id == user_id)
     result = await session.execute(query)
-    my_created_workouts = result.mappings().all()
+    my_workouts = result.mappings().all()
     return {
         'status': 'success',
-        'data': my_created_workouts,
+        'data': my_workouts,
         'details': None,
     }
 
@@ -123,7 +123,35 @@ async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get
     }
 
 
-@router.patch("/update{set_id}")
+@router.patch("/workout/update/{workout_id}")
+async def update_workout(workout_id: int, name: str, description: str, difficulty: str, total_time: str,
+                         session: AsyncSession = Depends(get_async_session)):
+    query = (update(Workout).filter(Workout.id == workout_id)
+             .values(name=name, description=description, difficulty=difficulty, total_time=total_time))
+
+    await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.patch("/exercise/update/{exercise_id}")
+async def update_exercise(exercise_id: int, count: int, session: AsyncSession = Depends(get_async_session)):
+    query = update(Exercise).filter(Exercise.id == exercise_id).values(count=count)
+
+    await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.patch("/set/update/{set_id}")
 async def update_set(set_id: int, count: int, session: AsyncSession = Depends(get_async_session)):
     query = update(Set).filter(Set.id == set_id).values(count=count)
 
