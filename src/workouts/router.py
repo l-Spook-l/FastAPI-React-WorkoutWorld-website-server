@@ -8,7 +8,7 @@ from fastapi.exceptions import HTTPException
 # router - объединяет несколько endpoints(url)
 # и вызываем в main
 from .models import Workout, Exercise, Set
-from .schemas import WorkoutCreate, ExerciseCreate, SetCreate
+from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
 
 router = APIRouter(
     # prefix - url путь
@@ -123,10 +123,9 @@ async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get
 
 
 @router.patch("/workout/update/{workout_id}")
-async def update_workout(workout_id: int, name: str, description: str, difficulty: str, total_time: str,
+async def update_workout(workout_id: int, update_data: WorkoutUpdate,
                          session: AsyncSession = Depends(get_async_session)):
-    query = (update(Workout).filter(Workout.id == workout_id).values(name=name, description=description,
-                                                                     difficulty=difficulty, total_time=total_time))
+    query = (update(Workout).filter(Workout.id == workout_id).values(**update_data.model_dump(exclude_none=True)))
 
     await session.execute(query)
     await session.commit()
@@ -138,13 +137,8 @@ async def update_workout(workout_id: int, name: str, description: str, difficult
 
 
 @router.patch("/exercise/update/{exercise_id}")
-async def update_exercise(exercise_id: int, name: str, description: str, number_of_sets: int,
-                          maximum_repetitions: int, rest_time: int, video: str, photo: str,
-                          session: AsyncSession = Depends(get_async_session)):
-    query = update(Exercise).filter(Exercise.id == exercise_id).values(name=name, description=description,
-                                                                       number_of_sets=number_of_sets,
-                                                                       maximum_repetitions=maximum_repetitions,
-                                                                       rest_time=rest_time, video=video, photo=photo)
+async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, session: AsyncSession = Depends(get_async_session)):
+    query = update(Exercise).filter(Exercise.id == exercise_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
     await session.commit()
@@ -156,8 +150,8 @@ async def update_exercise(exercise_id: int, name: str, description: str, number_
 
 
 @router.patch("/set/update/{set_id}")
-async def update_set(set_id: int, count: int, weight: int, session: AsyncSession = Depends(get_async_session)):
-    query = update(Set).filter(Set.id == set_id).values(count=count, weight=weight)
+async def update_set(set_id: int, update_data: SetUpdate, session: AsyncSession = Depends(get_async_session)):
+    query = update(Set).filter(Set.id == set_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
     await session.commit()
