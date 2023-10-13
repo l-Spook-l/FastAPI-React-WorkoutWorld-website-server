@@ -109,10 +109,22 @@ async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_asyn
     }
 
 
+# @router.get("/sets")
+# async def get_sets(exercise_id: int, user_id: int, session: AsyncSession = Depends(get_async_session)):
+#     query = select(Set).filter(Set.exercise_id == exercise_id).filter(Set.user_id == user_id)
+#     # print('query', query)
+#     result = await session.execute(query)
+#     sets = result.mappings().all()
+#     return {
+#         'status': 'success',
+#         'data': sets,
+#         'details': None,
+#     }
+
 @router.get("/sets")
-async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Set).filter(Set.exercise_id == exercise).filter(Set.user_id == user)
-    print('query', query)
+async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),  session: AsyncSession = Depends(get_async_session)):
+    query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id)
+    # print('query', query)
     result = await session.execute(query)
     sets = result.mappings().all()
     return {
@@ -123,8 +135,7 @@ async def get_sets(exercise: int, user: int, session: AsyncSession = Depends(get
 
 
 @router.patch("/workout/update/{workout_id}")
-async def update_workout(workout_id: int, update_data: WorkoutUpdate,
-                         session: AsyncSession = Depends(get_async_session)):
+async def update_workout(workout_id: int, update_data: WorkoutUpdate, session: AsyncSession = Depends(get_async_session)):
     query = (update(Workout).filter(Workout.id == workout_id).values(**update_data.model_dump(exclude_none=True)))
 
     await session.execute(query)
