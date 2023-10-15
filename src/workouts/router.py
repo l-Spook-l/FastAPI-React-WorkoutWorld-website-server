@@ -109,22 +109,9 @@ async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_asyn
     }
 
 
-# @router.get("/sets")
-# async def get_sets(exercise_id: int, user_id: int, session: AsyncSession = Depends(get_async_session)):
-#     query = select(Set).filter(Set.exercise_id == exercise_id).filter(Set.user_id == user_id)
-#     # print('query', query)
-#     result = await session.execute(query)
-#     sets = result.mappings().all()
-#     return {
-#         'status': 'success',
-#         'data': sets,
-#         'details': None,
-#     }
-
 @router.get("/sets")
 async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),  session: AsyncSession = Depends(get_async_session)):
-    query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id)
-    # print('query', query)
+    query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id).order_by(Set.id)
     result = await session.execute(query)
     sets = result.mappings().all()
     return {
