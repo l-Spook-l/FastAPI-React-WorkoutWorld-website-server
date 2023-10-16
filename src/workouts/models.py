@@ -22,18 +22,19 @@ class Workout(Base):
     total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="workout")
-    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all")
+    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all", order_by="Exercise.id")
 
 
 class Exercise(Base):
     __tablename__ = "exercise_table"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
+    name: Mapped[str] = mapped_column(String(length=256))
     workout_id: Mapped[int] = mapped_column(ForeignKey("workout_table.id"))
     description: Mapped[str] = mapped_column(String(length=500))
     number_of_sets: Mapped[int]
     maximum_repetitions: Mapped[int]
-    rest_time: Mapped[str] = mapped_column(String(length=99))
+    rest_time: Mapped[int]
     video: Mapped[str | None]
     photo: Mapped[str | None]
 
