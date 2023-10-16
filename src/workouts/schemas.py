@@ -8,6 +8,7 @@ class WorkoutCreate(BaseModel):
     name: str
     user_id: int
     description: str
+    is_public: bool
     difficulty: str
     total_time: str
 
@@ -33,6 +34,7 @@ class SetCreate(BaseModel):
 class WorkoutUpdate(BaseModel):
     name: str = None
     description: str = None
+    is_public: bool = None
     difficulty: str = None
     total_time: str = None
 
