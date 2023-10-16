@@ -1,5 +1,5 @@
 # Ну это модели
-from __future__ import annotations
+from __future__ import annotations  # делает ненужным импорт моделей
 
 from datetime import datetime
 
@@ -29,7 +29,7 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
     first_name: Mapped[str] = mapped_column(String(length=99), nullable=False)
-    second_name: Mapped[str] = mapped_column(String(99), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(99), nullable=False)
     phone: Mapped[int | None] = mapped_column(nullable=False)  # необязательное поле [int | None]
     username: Mapped[str] = mapped_column(String(99), nullable=False, unique=True)
     registered_at: Mapped[datetime] = mapped_column(default=datetime.utcnow())
@@ -43,5 +43,6 @@ class User(SQLAlchemyBaseUserTable[int], Base):
 
     # back_populates="user - на что ссылаемся, cascade="all" - при удалении польз. удалить все
     role: Mapped["Role"] = relationship(back_populates="user")
-    workout: Mapped[list["Workout"]] = relationship(back_populates="user", cascade="all")
+    created_workouts: Mapped[list["Workout"]] = relationship(back_populates="user", cascade="all")
+    added_workouts: Mapped[list["Workout"] | None] = relationship(secondary="added_workouts_association", cascade="all")
     set: Mapped[list["Set"]] = relationship(back_populates="user", cascade="all")
