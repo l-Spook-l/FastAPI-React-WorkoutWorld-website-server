@@ -44,17 +44,27 @@ async def add_set(new_set: SetCreate, session: AsyncSession = Depends(get_async_
     return {"status": "success"}
 
 
-# @router.post("/add-workout-to-user/{user_id}/{workout_id}")
-# def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSession = Depends(get_async_session)):
-#     user = select(User).filter(User.id == user_id)
-#     workout = select(Workout).filter(Workout.id == workout_id)
-#
-#     if not user or not workout:
-#         raise HTTPException(status_code=404, detail="User or workout not found")
-#
-#     user.workouts.append(workout)
-#     db.commit()
-#     return {"message": f"Workout added to user {user.name}"}
+@router.post("/add-workout-to-user/{user_id}/{workout_id}")
+async def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSession = Depends(get_async_session)):
+    query_user = select(User).filter(User.id == user_id)
+    result_user = await session.execute(query_user)
+    user = result_user.first()
+    query_workout = select(Workout).filter(Workout.id == workout_id)
+    result_workout = await session.execute(query_workout)
+    workout = result_workout.first()
+
+    if not user or not workout:
+        raise HTTPException(status_code=404, detail="User or Workout not found")
+
+    # Создаем новую связь
+    new_association = insert(added_workouts_association).values(user_table=user_id, workout_table=workout_id)
+    await session.execute(new_association)
+
+    # Добавляем тренировку в свойство workouts у пользователя
+
+    await session.commit()
+    return {"status": "success", "message": "Workout added to user"}
+
 
 @router.get("/")
 async def get_workouts(
@@ -121,9 +131,12 @@ async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_asyn
         'details': None,
     }
 
+
 @router.get("/get-user-added-workouts/{user_id}")
 async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
-    user = select(User).filter(User.id == user_id)
+    query_user = select(User).filter(User.id == user_id)
+    result_user = await session.execute(query_user)
+    user = result_user.first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -133,8 +146,6 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
     result = await session.execute(stmt)
     user_workouts = result.mappings().all()
     return {"user_id": user_id, "workouts": user_workouts}
-
-
 
 
 @router.get("/sets")
@@ -151,7 +162,7 @@ async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),  session
 
 @router.patch("/workout/update/{workout_id}")
 async def update_workout(workout_id: int, update_data: WorkoutUpdate, session: AsyncSession = Depends(get_async_session)):
-    query = (update(Workout).filter(Workout.id == workout_id).values(**update_data.model_dump(exclude_none=True)))
+    query = update(Workout).filter(Workout.id == workout_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
     await session.commit()
