@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, insert, update, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 from fastapi.exceptions import HTTPException
@@ -60,8 +60,8 @@ async def get_workouts(
         if difficulty:  # Выбираем все записи из табл. Workout и по сложности
             query = query.filter(Workout.difficulty == difficulty)
 
-        # добавляем лимиты
-        query = query.limit(limit).offset(skip)
+        # добавляем лимиты и сортировку по полю is_public если оно True
+        query = query.limit(limit).offset(skip).filter(Workout.is_public)
         # делаем запрос в БД
         result = await session.execute(query)
         # подсчет общего количества записей
