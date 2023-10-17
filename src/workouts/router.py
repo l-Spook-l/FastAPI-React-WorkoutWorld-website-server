@@ -7,7 +7,8 @@ from fastapi.exceptions import HTTPException
 
 # router - объединяет несколько endpoints(url)
 # и вызываем в main
-from .models import Workout, Exercise, Set
+from .models import Workout, Exercise, Set, added_workouts_association
+from ..auth.models import User
 from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
 
 router = APIRouter(
@@ -42,6 +43,18 @@ async def add_set(new_set: SetCreate, session: AsyncSession = Depends(get_async_
     await session.commit()
     return {"status": "success"}
 
+
+# @router.post("/add-workout-to-user/{user_id}/{workout_id}")
+# def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSession = Depends(get_async_session)):
+#     user = select(User).filter(User.id == user_id)
+#     workout = select(Workout).filter(Workout.id == workout_id)
+#
+#     if not user or not workout:
+#         raise HTTPException(status_code=404, detail="User or workout not found")
+#
+#     user.workouts.append(workout)
+#     db.commit()
+#     return {"message": f"Workout added to user {user.name}"}
 
 @router.get("/")
 async def get_workouts(
@@ -107,6 +120,21 @@ async def get_my_workouts(user_id: int, session: AsyncSession = Depends(get_asyn
         'data': my_workouts,
         'details': None,
     }
+
+@router.get("/get-user-added-workouts/{user_id}")
+async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
+    user = select(User).filter(User.id == user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
+    stmt = select(Workout).join(added_workouts_association).filter(added_workouts_association.c.user_id == user_id)
+    result = await session.execute(stmt)
+    user_workouts = result.mappings().all()
+    return {"user_id": user_id, "workouts": user_workouts}
+
+
 
 
 @router.get("/sets")
