@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, insert, update, func
+from sqlalchemy import select, insert, update, func, delete
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
@@ -46,6 +46,15 @@ async def add_set(new_set: SetCreate, session: AsyncSession = Depends(get_async_
 
 @router.post("/add-workout-to-user/{user_id}/{workout_id}")
 async def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSession = Depends(get_async_session)):
+    # Проверяем, существует ли уже такая связь
+    existing_association = select(added_workouts_association).where(
+        (added_workouts_association.c.user_table == user_id) &
+        (added_workouts_association.c.workout_table == workout_id)
+    )
+    result_existing = await session.execute(existing_association)
+    if result_existing.scalar():
+        raise HTTPException(status_code=400, detail="This workout is already added to the user")
+
     query_user = select(User).filter(User.id == user_id)
     result_user = await session.execute(query_user)
     user = result_user.first()
@@ -142,7 +151,8 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
         raise HTTPException(status_code=404, detail="User not found")
 
     # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
-    stmt = select(Workout).join(added_workouts_association).filter(added_workouts_association.c.user_id == user_id)
+    # ПОМЕНЯТЬ ТАБЛИЦУ ОБЩУЮ
+    stmt = select(Workout).join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
     result = await session.execute(stmt)
     user_workouts = result.mappings().all()
     return {"user_id": user_id, "workouts": user_workouts}
@@ -197,3 +207,19 @@ async def update_set(set_id: int, update_data: SetUpdate, session: AsyncSession 
         'status': 'success',
         'details': None,
     }
+
+
+@router.delete("/delete/added-workout")
+async def delete_added_workout(workout_id: int, user_id: int, session: AsyncSession = Depends(get_async_session)):
+    query = delete(added_workouts_association).where(
+        (added_workouts_association.c.workout_id == workout_id) and
+        (added_workouts_association.c.user_id == user_id)
+    )
+    await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
