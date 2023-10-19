@@ -37,9 +37,10 @@ async def add_exercise(new_exercise: ExerciseCreate, session: AsyncSession = Dep
 
 
 @router.post("/create_set")
-async def add_set(new_set: SetCreate, session: AsyncSession = Depends(get_async_session)):
-    stat = insert(Set).values(**new_set.dict())
-    await session.execute(stat)
+async def add_set(number_sets: int, new_set: SetCreate, session: AsyncSession = Depends(get_async_session)):
+    for _ in range(number_sets):
+        stat = insert(Set).values(**new_set.dict())
+        await session.execute(stat)
     await session.commit()
     return {"status": "success"}
 
@@ -68,10 +69,8 @@ async def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSessi
     # Создаем новую связь
     new_association = insert(added_workouts_association).values(user_table=user_id, workout_table=workout_id)
     await session.execute(new_association)
-
-    # Добавляем тренировку в свойство workouts у пользователя
-
     await session.commit()
+
     return {"status": "success", "message": "Workout added to user"}
 
 
@@ -212,8 +211,8 @@ async def update_set(set_id: int, update_data: SetUpdate, session: AsyncSession 
 @router.delete("/delete/added-workout")
 async def delete_added_workout(workout_id: int, user_id: int, session: AsyncSession = Depends(get_async_session)):
     query = delete(added_workouts_association).where(
-        (added_workouts_association.c.workout_id == workout_id) and
-        (added_workouts_association.c.user_id == user_id)
+        (added_workouts_association.c.workout_table == workout_id) and
+        (added_workouts_association.c.user_table == user_id)
     )
     await session.execute(query)
     await session.commit()
@@ -222,4 +221,3 @@ async def delete_added_workout(workout_id: int, user_id: int, session: AsyncSess
         'status': 'success',
         'details': None,
     }
-
