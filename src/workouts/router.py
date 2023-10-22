@@ -30,10 +30,11 @@ async def add_workout(new_workout: WorkoutCreate, session: AsyncSession = Depend
 
 @router.post("/create_exercise")
 async def add_exercise(new_exercise: ExerciseCreate, session: AsyncSession = Depends(get_async_session)):
-    stat = insert(Exercise).values(**new_exercise.dict())
-    await session.execute(stat)
+    stat = insert(Exercise).values(**new_exercise.dict()).returning(Exercise.id)
+    result = await session.execute(stat)
+    id = result.scalar()
     await session.commit()
-    return {"status": "success"}
+    return {"status": "success", 'exercise_ID': id}
 
 
 @router.post("/create_set")
@@ -213,6 +214,21 @@ async def delete_added_workout(workout_id: int, user_id: int, session: AsyncSess
     query = delete(added_workouts_association).where(
         (added_workouts_association.c.workout_table == workout_id) and
         (added_workouts_association.c.user_table == user_id)
+    )
+    await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.delete("/delete/added-sets")
+async def delete_added_sets(exercise_id: int, user_id: int, session: AsyncSession = Depends(get_async_session)):
+    query = delete(Set).where(
+        (Set.exercise_id == exercise_id) and
+        (Set.user_id == user_id)
     )
     await session.execute(query)
     await session.commit()
