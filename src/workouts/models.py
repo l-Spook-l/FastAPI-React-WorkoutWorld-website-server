@@ -10,6 +10,7 @@ from src.database import Base
 
 # from src.auth.models import User
 
+# added_workouts_association.c.user_table - доступ к полю
 added_workouts_association = Table(
     "added_workouts_association",
     Base.metadata,
@@ -31,7 +32,7 @@ class Workout(Base):
     total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="created_workouts")
-    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all", order_by="Exercise.id")
+    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all, delete-orphan", order_by="Exercise.id")
 
 
 class Exercise(Base):
@@ -39,7 +40,7 @@ class Exercise(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     name: Mapped[str] = mapped_column(String(length=256))
-    workout_id: Mapped[int] = mapped_column(ForeignKey("workout_table.id"))
+    workout_id: Mapped[int] = mapped_column(ForeignKey("workout_table.id", ondelete="CASCADE"))
     description: Mapped[str] = mapped_column(String(length=500))
     number_of_sets: Mapped[int]
     maximum_repetitions: Mapped[int]
@@ -48,16 +49,16 @@ class Exercise(Base):
     photo: Mapped[str | None]
 
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
-    set: Mapped[list["Set"]] = relationship(back_populates="exercise")
+    set: Mapped[list["Set"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
 
 
 class Set(Base):
     __tablename__ = "set_table"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
-    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id"))
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(ForeignKey("user_table.id"))
-    count: Mapped[int]
+    repetition: Mapped[int]
     weight: Mapped[int]
 
     exercise: Mapped["Exercise"] = relationship(back_populates="set")
