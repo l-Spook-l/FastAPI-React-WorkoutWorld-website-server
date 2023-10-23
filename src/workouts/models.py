@@ -18,6 +18,13 @@ added_workouts_association = Table(
     Column("user_table", ForeignKey("user_table.id")),
 )
 
+photo_for_exercise = Table(
+    "photos_for_exercise",
+    Base.metadata,
+    Column("exercise_photo_table", ForeignKey("exercise_photo_table.id")),
+    Column("exercise_table", ForeignKey("exercise_table.id")),
+)
+
 
 class Workout(Base):
     __tablename__ = "workout_table"
@@ -63,3 +70,10 @@ class Set(Base):
 
     exercise: Mapped["Exercise"] = relationship(back_populates="set")
     user: Mapped["User"] = relationship(back_populates="set")
+
+
+class Exercise_photo(Base):
+    __tablename__ = "exercise_photo_table"
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id", ondelete="CASCADE"))
+    photo: Mapped[str | None]
