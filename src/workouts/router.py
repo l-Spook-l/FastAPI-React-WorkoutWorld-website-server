@@ -160,6 +160,7 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
 
 @router.get("/sets")
 async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),  session: AsyncSession = Depends(get_async_session)):
+    # вывод в порядке id
     query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id).order_by(Set.id)
     result = await session.execute(query)
     sets = result.mappings().all()
@@ -199,6 +200,19 @@ async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, session
 @router.patch("/set/update/{set_id}")
 async def update_set(set_id: int, update_data: SetUpdate, session: AsyncSession = Depends(get_async_session)):
     query = update(Set).filter(Set.id == set_id).values(**update_data.model_dump(exclude_none=True))
+
+    await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.delete("/delete/workout")
+async def delete_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
+    query = delete(Workout).filter(Workout.id == workout_id)
 
     await session.execute(query)
     await session.commit()
