@@ -20,14 +20,12 @@ class ExerciseCreate(BaseModel):
     number_of_sets: int
     maximum_repetitions: int
     rest_time: int
-    video: str
-    photo: str
 
 
 class SetCreate(BaseModel):
     exercise_id: int
     user_id: int
-    count: int
+    repetition: int
     weight: int = Field(ge=0)  # число должно быть >= 0
 
 
@@ -45,10 +43,18 @@ class ExerciseUpdate(BaseModel):
     number_of_sets: int = None
     maximum_repetitions: int = None
     rest_time: int = None
-    video: str = None
-    photo: str = None
 
 
 class SetUpdate(BaseModel):
-    count: int = None
+    repetition: int = None
     weight: int = None
+
+
+class ExercisePhoto(BaseModel):
+    exercise_id: int = None
+    photo: str = None
+
+
+class ExerciseVideo(BaseModel):
+    exercise_id: int = None
+    video: str = None
