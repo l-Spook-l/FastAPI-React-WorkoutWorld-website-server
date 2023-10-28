@@ -54,9 +54,10 @@ class Exercise(Base):
     rest_time: Mapped[int | None]
     video: Mapped[str | None]
 
+    # exercise = это поле в Workout и так же в других случаях
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
-    photo: Mapped[list["Exercise_photo"]] = relationship(back_populates="exercise_photo", cascade="all, delete-orphan")
+    photo: Mapped[list["Exercise_photo"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
 
 
 class Set(Base):
@@ -77,3 +78,5 @@ class Exercise_photo(Base):  # и из папки тоже удалять при
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id", ondelete="CASCADE"))
     photo: Mapped[str | None]
+
+    exercise: Mapped["Exercise"] = relationship(back_populates="photo")
