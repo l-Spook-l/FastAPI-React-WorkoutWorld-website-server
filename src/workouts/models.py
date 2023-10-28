@@ -18,12 +18,12 @@ added_workouts_association = Table(
     Column("user_table", ForeignKey("user_table.id")),
 )
 
-photo_for_exercise = Table(
-    "photos_for_exercise",
-    Base.metadata,
-    Column("exercise_photo_table", ForeignKey("exercise_photo_table.id")),
-    Column("exercise_table", ForeignKey("exercise_table.id")),
-)
+# photo_for_exercise = Table(
+#     "photos_for_exercise",
+#     Base.metadata,
+#     Column("exercise_photo_table", ForeignKey("exercise_photo_table.id")),
+#     Column("exercise_table", ForeignKey("exercise_table.id")),
+# )
 
 
 class Workout(Base):
@@ -53,10 +53,10 @@ class Exercise(Base):
     maximum_repetitions: Mapped[int]
     rest_time: Mapped[int | None]
     video: Mapped[str | None]
-    photo: Mapped[str | None]
 
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
+    photo: Mapped[list["Exercise_photo"]] = relationship(back_populates="exercise_photo", cascade="all, delete-orphan")
 
 
 class Set(Base):
@@ -72,7 +72,7 @@ class Set(Base):
     user: Mapped["User"] = relationship(back_populates="set")
 
 
-class Exercise_photo(Base):
+class Exercise_photo(Base):  # и из папки тоже удалять при удалении
     __tablename__ = "exercise_photo_table"
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id", ondelete="CASCADE"))
