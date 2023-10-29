@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, Query, File, UploadFile, Form
+from fastapi import APIRouter, Depends, Query, UploadFile, Form
 from sqlalchemy import select, insert, update, func, delete
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 from fastapi.exceptions import HTTPException
-import shutil
 import aiofiles
+from uuid import uuid4
+import os
 
 # router - объединяет несколько endpoints(url)
 # и вызываем в main
-from .models import Workout, Exercise, Set, added_workouts_association
+from .models import Workout, Exercise, Set, added_workouts_association, Exercise_photo
 from ..auth.models import User
 from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
 
@@ -30,44 +31,20 @@ async def add_workout(new_workout: WorkoutCreate, session: AsyncSession = Depend
     return {"status": "success", 'workout_ID': id}
 
 
-@router.post("/create_exercise")
-async def add_exercise(new_exercise: ExerciseCreate, session: AsyncSession = Depends(get_async_session)):
-    stat = insert(Exercise).values(**new_exercise.dict()).returning(Exercise.id)
-    result = await session.execute(stat)
-    id = result.scalar()
-    await session.commit()
-    return {"status": "success", 'exercise_ID': id}
-
-
-@router.post("/add_video_exercise")
-# async def add_video_exercise(new_exercise: ExerciseCreate,
-#                              video: UploadFile = File(...),
-#                              session: AsyncSession = Depends(get_async_session)):
+@router.post("/create_exercise")  # 19:00 номер видео 4
 async def add_video_exercise(
         name: str = Form(...),
-    workout_id: int = Form(...),
-    description: str = Form(...),
-    number_of_sets: int = Form(...),
-    maximum_repetitions: int = Form(...),
-    rest_time: int = Form(...),
-                             video: UploadFile = File(...),
-                             # photos: list[UploadFile] = File(...),
-                             session: AsyncSession = Depends(get_async_session)):
-    # if file.content_type == "video/mp4":
-    #     print('e')
-
-    video.filename = video.filename.lower()
-    path = f"src/static/{video.filename}"
-    async with aiofiles.open(path, '+wb') as buffer:
-        data = await video.read()
-        await buffer.write(data)
-
-    # for photo in photos:
-    #     photo.filename = photo.filename.lower()
-    #     path = f"src/static/{photo.filename}"
-    #     with aiofiles.open(path, '+wb') as buffer:
-    #         data = await file.read()
-    #         await buffer.write(data)
+        workout_id: int = Form(...),
+        description: str = Form(...),
+        number_of_sets: int = Form(...),
+        maximum_repetitions: int = Form(...),
+        rest_time: int = Form(...),
+        video: UploadFile = None,
+        photos: list[UploadFile] = None,
+        session: AsyncSession = Depends(get_async_session)):
+    # print('video', f"src/static/Photos exercise/{video.filename}_{uuid4()}")
+    # exercise_data = f"src/static/Photos exercise/{exercise_data.name}_{video.filename}"
+    # print('weqwqe', video)
 
     exercise_data = ExerciseCreate(
         name=name,
@@ -76,26 +53,32 @@ async def add_video_exercise(
         number_of_sets=number_of_sets,
         maximum_repetitions=maximum_repetitions,
         rest_time=rest_time,
-        video=video.filename
     )
 
-    # video.filename = video.filename.lower()
-    # path = f"src/static/{video.filename}"
-    # with open(path, '+wb') as buffer:
-    #     shutil.copyfileobj(video.file, buffer)
-
-    # for photo in photos:
-    #     photo.filename = photo.filename.lower()
-    #     path = f"src/static/{photo.filename}"
-    #     with open(path, '+wb') as buffer:
-    #         shutil.copyfileobj(photo.file, buffer)
+    if video:
+        video.filename = video.filename.lower()
+        path_video = f"src/media/Video_exercise/{name}_{uuid4()}.png"
+        async with aiofiles.open(path_video, '+wb') as buffer:
+            data = await video.read()
+            await buffer.write(data)
+        exercise_data.video = path_video[4:]
 
     stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
     result = await session.execute(stat)
     id = result.scalar()
+
+    if photos:
+        for photo in photos:
+            photo.filename = photo.filename.lower()
+            path_photos = f"src/media/Photos_exercise/{id}_{name}_{uuid4()}.png"
+            async with aiofiles.open(path_photos, '+wb') as buffer:
+                data = await photo.read()
+                await buffer.write(data)
+            add_photos = insert(Exercise_photo).values(photo=path_photos, exercise_id=id)
+            await session.execute(add_photos)
+
     await session.commit()
-    return {"status": "success", 'file': video.filename}
-    # return {"status": "success"}
+    return {"status": "success", 'exercise_ID': id}
 
 
 @router.post("/create_set")
@@ -274,9 +257,24 @@ async def update_set(set_id: int, update_data: SetUpdate, session: AsyncSession 
 
 @router.delete("/delete/created-workout")
 async def delete_created_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = delete(Workout).filter(Workout.id == workout_id)
+    workout = await session.get(Workout, workout_id)
 
-    await session.execute(query)
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    exercises = await session.execute(select(Exercise).filter(Exercise.workout_id == workout_id))
+    exercises_2 = exercises.mappings().all()
+    for exercise in exercises_2:
+        photos_exercise = await session.execute(select(Exercise_photo).filter(Exercise_photo.exercise_id == exercise.Exercise.id))
+        result_photos_exercise = photos_exercise.mappings().all()
+        for photo in result_photos_exercise:
+            photo_path = os.path.join(photo.Exercise_photo.photo)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+
+    workout = delete(Workout).filter(Workout.id == workout_id)
+
+    await session.execute(workout)
     await session.commit()
 
     return {
@@ -313,6 +311,3 @@ async def delete_added_sets(exercise_id: int, user_id: int, session: AsyncSessio
         'status': 'success',
         'details': None,
     }
-
-
-
