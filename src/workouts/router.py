@@ -164,7 +164,7 @@ async def get_workouts(
 
 @router.get("/workout/{workout_id}")  # изменить путь !!!!!!!!!!!!
 async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Workout).filter(Workout.id == workout_id).options(selectinload(Workout.exercise))
+    query = select(Workout).filter(Workout.id == workout_id).options(selectinload(Workout.exercise).options(selectinload(Exercise.photo)))
     result = await session.execute(query)
     workout = result.mappings().one()
     return {
