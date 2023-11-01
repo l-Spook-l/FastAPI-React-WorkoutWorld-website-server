@@ -74,7 +74,7 @@ async def add_video_exercise(
             async with aiofiles.open(path_photos, '+wb') as buffer:
                 data = await photo.read()
                 await buffer.write(data)
-            add_photos = insert(Exercise_photo).values(photo=path_photos, exercise_id=id)
+            add_photos = insert(Exercise_photo).values(photo=path_photos[4:], exercise_id=id)
             await session.execute(add_photos)
 
     await session.commit()
@@ -164,7 +164,8 @@ async def get_workouts(
 
 @router.get("/workout/{workout_id}")  # изменить путь !!!!!!!!!!!!
 async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Workout).filter(Workout.id == workout_id).options(selectinload(Workout.exercise).options(selectinload(Exercise.photo)))
+    query = (select(Workout).filter(Workout.id == workout_id).
+             options(selectinload(Workout.exercise).options(selectinload(Exercise.photo))))
     result = await session.execute(query)
     workout = result.mappings().one()
     return {
