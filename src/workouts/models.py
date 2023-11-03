@@ -80,3 +80,9 @@ class Exercise_photo(Base):  # и из папки тоже удалять при
     photo: Mapped[str | None]
 
     exercise: Mapped["Exercise"] = relationship(back_populates="photo")
+
+
+class DifficultyWorkout(Base):
+    __tablename__ = "difficulty_workout_table"
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
+    difficulty: Mapped[str]
