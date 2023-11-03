@@ -10,9 +10,10 @@ import os
 
 # router - объединяет несколько endpoints(url)
 # и вызываем в main
-from .models import Workout, Exercise, Set, added_workouts_association, Exercise_photo
+from .models import Workout, Exercise, Set, added_workouts_association, Exercise_photo, DifficultyWorkout
 from ..auth.models import User
-from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
+from .schemas import (
+    WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate, DifficultyWorkoutRead)
 
 router = APIRouter(
     # prefix - url путь
@@ -135,7 +136,7 @@ async def get_workouts(
         if name:  # Выбираем все записи из табл. Workout и по названию
             query = query.filter(Workout.name == name)
         if difficulty:  # Выбираем все записи из табл. Workout и по сложности
-            query = query.filter(Workout.difficulty == difficulty)
+            query = query.filter(Workout.difficulty_id == difficulty)
 
         # добавляем лимиты и сортировку по полю is_public если оно True
         query = query.limit(limit).offset(skip).filter(Workout.is_public)
@@ -217,6 +218,19 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
     result = await session.execute(stmt)
     user_workouts = result.mappings().all()
     return {"user_id": user_id, "workouts": user_workouts}
+
+
+@router.get("/workout-difficulties")
+async def get_difficulty(session: AsyncSession = Depends(get_async_session)):
+    # вывод в порядке id
+    query = select(DifficultyWorkout)
+    result = await session.execute(query)
+    difficulty = result.mappings().all()
+    return {
+        'status': 'success',
+        'data': difficulty,
+        'details': None,
+    }
 
 
 @router.get("/sets")
