@@ -35,7 +35,8 @@ class Workout(Base):
     description: Mapped[str] = mapped_column(String(length=1000))
     is_public: Mapped[bool]
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow())
-    difficulty: Mapped[str] = mapped_column(String(length=50))
+    # difficulty: Mapped[str] = mapped_column(String(length=50))
+    difficulty_id: Mapped[int] = mapped_column(ForeignKey("difficulty_workout_table.id"))
     total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="created_workouts")
@@ -86,3 +87,5 @@ class DifficultyWorkout(Base):
     __tablename__ = "difficulty_workout_table"
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     difficulty: Mapped[str]
+
+    workout: Mapped[list["Workout"]] = relationship(back_populates="difficulty")
