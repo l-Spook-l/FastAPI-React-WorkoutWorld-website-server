@@ -147,7 +147,12 @@ async def get_workouts(
         # делаем запрос в БД
         result = await session.execute(query)
         # подсчет общего количества записей
-        total_count = await session.scalar(select(func.count()).select_from(Workout))
+        total_count = await session.scalar(
+            select(func.count())
+            .select_from(Workout)
+            .filter(Workout.name.ilike(query_name) if name else True)
+            .filter(Workout.difficulty.in_(difficulty) if difficulty else True)
+        )
         # получаем список из словарей
         workouts = result.mappings().all()
 
@@ -189,23 +194,45 @@ async def get_my_workouts(user_id: int,
                           is_public: bool = Query(None, description="Filter by status"),
                           page: int = Query(1, description="Page number"),
                           session: AsyncSession = Depends(get_async_session)):
-    query = select(Workout)
-    # Применяем фильтры
-    if name:  # Выбираем все записи из табл. Workout и по названию
-        query = query.filter(Workout.name == name)
-    if difficulty:  # Выбираем все записи из табл. Workout и по сложности
-        query = query.filter(Workout.difficulty.in_(difficulty))
-    if is_public is not None:
-        query = query.filter(Workout.is_public == is_public)
+    query_name = f"%{name}%"
 
-    query = query.filter(Workout.user_id == user_id).limit(limit).offset(skip)
-    result = await session.execute(query)
-    my_workouts = result.mappings().all()
-    return {
-        'status': 'success',
-        'data': my_workouts,
-        'details': None,
-    }
+    try:
+        query = select(Workout)
+        # Применяем фильтры
+        if name:  # Выбираем все записи из табл. Workout и по названию
+            query = query.filter(Workout.name.ilike(query_name))
+        if difficulty:  # Выбираем все записи из табл. Workout и по сложности
+            query = query.filter(Workout.difficulty.in_(difficulty))
+        if is_public is not None:
+            query = query.filter(Workout.is_public == is_public)
+
+        query = query.filter(Workout.user_id == user_id).limit(limit).offset(skip)
+        result = await session.execute(query)
+        my_workouts = result.mappings().all()
+        # Запрос для общего количества отфильтрованных и отсортированных тренировок
+        total_count = await session.scalar(
+            select(func.count())
+            .select_from(Workout)
+            .filter(Workout.user_id == user_id)
+            .filter(Workout.name.ilike(query_name) if name else True)
+            .filter(Workout.difficulty.in_(difficulty) if difficulty else True)
+            .filter(Workout.is_public == is_public if is_public is not None else True)
+        )
+
+        return {
+            'status': 'success',
+            'data': my_workouts,
+            'skip': skip,
+            'limit': limit,
+            'total_count': total_count,
+            'details': None,
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail={
+            'status': 'error',
+            'data': None,
+            'details': None,
+        })
 
 
 @router.get("/get-user-added-workouts/{user_id}")
