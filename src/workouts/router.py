@@ -124,19 +124,23 @@ async def add_workout_to_user(user_id: int, workout_id: int, session: AsyncSessi
 @router.get("/")
 async def get_workouts(
         name: str = Query(None, description="Filter by name"),
-        difficulty: str = Query(None, description="Filter by difficulty"),
+        difficulty: list[str] = Query(None, description="Filter by difficulty"),
         skip: int = Query(0, description="Number of records to skip"),
         limit: int = Query(12, description="Number of records to return"),
         page: int = Query(1, description="Page number"),
         session: AsyncSession = Depends(get_async_session)):
+
+    # Нормализация запроса для безопасности (предотвращение SQL-инъекций)
+    query_name = f"%{name}%"
+
     try:
         # Создаем базовый запрос
         query = select(Workout)
         # Применяем фильтры, если они предоставлены в name или difficulty
         if name:  # Выбираем все записи из табл. Workout и по названию
-            query = query.filter(Workout.name == name)
+            query = query.filter(Workout.name.ilike(query_name))
         if difficulty:  # Выбираем все записи из табл. Workout и по сложности
-            query = query.filter(Workout.difficulty_id == difficulty)
+            query = query.filter(Workout.difficulty.in_(difficulty))
 
         # добавляем лимиты и сортировку по полю is_public если оно True
         query = query.limit(limit).offset(skip).filter(Workout.is_public)
@@ -179,17 +183,18 @@ async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_a
 @router.get("/user-workouts")
 async def get_my_workouts(user_id: int,
                           name: str = Query(None, description="Filter by name"),
-                          difficulty: str = Query(None, description="Filter by difficulty"),
+                          difficulty: list[str] = Query(None, description="Filter by difficulty"),
                           skip: int = Query(0, description="Number of records to skip"),
                           limit: int = Query(12, description="Number of records to return"),
                           is_public: bool = Query(None, description="Filter by status"),
+                          page: int = Query(1, description="Page number"),
                           session: AsyncSession = Depends(get_async_session)):
     query = select(Workout)
     # Применяем фильтры
     if name:  # Выбираем все записи из табл. Workout и по названию
         query = query.filter(Workout.name == name)
     if difficulty:  # Выбираем все записи из табл. Workout и по сложности
-        query = query.filter(Workout.difficulty == difficulty)
+        query = query.filter(Workout.difficulty.in_(difficulty))
     if is_public is not None:
         query = query.filter(Workout.is_public == is_public)
 
@@ -222,7 +227,6 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
 
 @router.get("/workout-difficulties")
 async def get_difficulty(session: AsyncSession = Depends(get_async_session)):
-    # вывод в порядке id
     query = select(DifficultyWorkout)
     result = await session.execute(query)
     difficulty = result.mappings().all()
