@@ -150,6 +150,7 @@ async def get_workouts(
         total_count = await session.scalar(
             select(func.count())
             .select_from(Workout)
+            .filter(Workout.is_public)
             .filter(Workout.name.ilike(query_name) if name else True)
             .filter(Workout.difficulty.in_(difficulty) if difficulty else True)
         )
@@ -190,7 +191,7 @@ async def get_my_workouts(user_id: int,
                           name: str = Query(None, description="Filter by name"),
                           difficulty: list[str] = Query(None, description="Filter by difficulty"),
                           skip: int = Query(0, description="Number of records to skip"),
-                          limit: int = Query(12, description="Number of records to return"),
+                          limit: int = Query(9, description="Number of records to return"),
                           is_public: bool = Query(None, description="Filter by status"),
                           page: int = Query(1, description="Page number"),
                           session: AsyncSession = Depends(get_async_session)):
@@ -236,7 +237,13 @@ async def get_my_workouts(user_id: int,
 
 
 @router.get("/get-user-added-workouts/{user_id}")
-async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_user_workouts(user_id: int,
+                            name: str = Query(None, description="Filter by name"),
+                            difficulty: list[str] = Query(None, description="Filter by difficulty"),
+                            skip: int = Query(0, description="Number of records to skip"),
+                            limit: int = Query(9, description="Number of records to return"),
+                            page: int = Query(1, description="Page number"),
+                            session: AsyncSession = Depends(get_async_session)):
     query_user = select(User).filter(User.id == user_id)
     result_user = await session.execute(query_user)
     user = result_user.first()
@@ -246,10 +253,39 @@ async def get_user_workouts(user_id: int, session: AsyncSession = Depends(get_as
 
     # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
     # ПОМЕНЯТЬ ТАБЛИЦУ ОБЩУЮ
-    stmt = select(Workout).join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
-    result = await session.execute(stmt)
+    # query = (select(Workout).join(added_workouts_association)
+    #          .filter(added_workouts_association.c.user_table == user_id))
+    query_name = f"%{name}%"
+    query = select(Workout)
+    query = query.join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
+
+    # Применяем фильтры
+    if name:  # Выбираем все записи из табл. Workout и по названию
+        query = query.filter(Workout.name.ilike(query_name))
+    if difficulty:  # Выбираем все записи из табл. Workout и по сложности
+        query = query.filter(Workout.difficulty.in_(difficulty))
+
+    query = query.limit(limit).offset(skip)
+    result = await session.execute(query)
     user_workouts = result.mappings().all()
-    return {"user_id": user_id, "workouts": user_workouts}
+    # Запрос для общего количества отфильтрованных и отсортированных тренировок
+    total_count = await session.scalar(
+        select(func.count())
+        .select_from(Workout).join(added_workouts_association)
+        .filter(added_workouts_association.c.user_table == user_id)
+        .filter(Workout.name.ilike(query_name) if name else True)
+        .filter(Workout.difficulty.in_(difficulty) if difficulty else True)
+    )
+
+    return {
+        'status': 'success',
+        "user_id": user_id,
+        'data': user_workouts,
+        'skip': skip,
+        'limit': limit,
+        'total_count': total_count,
+        'details': None,
+    }
 
 
 @router.get("/workout-difficulties")
