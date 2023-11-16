@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query, UploadFile, Form
 from sqlalchemy import select, insert, update, func, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import NoResultFound
 from src.database import get_async_session
 from fastapi.exceptions import HTTPException
 from ..auth.base_config import current_user
@@ -120,6 +121,7 @@ async def get_workouts(
         skip: int = Query(0, description="Number of records to skip"),
         limit: int = Query(12, description="Number of records to return"),
         page: int = Query(1, description="Page number"),
+        # user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
 
     # Нормализация запроса для безопасности (предотвращение SQL-инъекций)
@@ -165,17 +167,25 @@ async def get_workouts(
         })
 
 
-@router.get("/workout/{workout_id}")  # изменить путь !!!!!!!!!!!!
+@router.get("/workout/{workout_id}")
 async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
     query = (select(Workout).filter(Workout.id == workout_id).
              options(selectinload(Workout.exercise).options(selectinload(Exercise.photo))))
-    result = await session.execute(query)
-    workout = result.mappings().one()
-    return {
-        'status': 'success',
-        'data': workout,
-        'details': None,
-    }
+    # result = await session.execute(query)
+    try:
+        # Код, который может вызвать ошибку NoResultFound
+        result = await session.execute(query)
+        workout = result.mappings().one()
+        return {
+            'status': 'success',
+            'data': workout,
+            'details': None,
+        }
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="This workout not found")
+    except Exception as e:
+        # Обработка других ошибок, если необходимо
+        raise HTTPException(status_code=500, detail="Server error")
 
 
 @router.get("/user-workouts")
@@ -398,8 +408,7 @@ async def delete_added_workout(workout_id: int, user_id: int, user: User = Depen
 @router.delete("/delete/added-sets")
 async def delete_added_sets(exercise_id: int, user_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
     query = delete(Set).where(
-        (Set.exercise_id == exercise_id) and
-        (Set.user_id == user_id)
+        (Set.exercise_id == exercise_id) and (Set.user_id == user_id)
     )
     await session.execute(query)
     await session.commit()
