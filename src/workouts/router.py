@@ -10,6 +10,7 @@ from typing import Optional
 import aiofiles
 from uuid import uuid4
 import os
+import bleach
 
 # router - объединяет несколько endpoints(url)
 # и вызываем в main
@@ -26,7 +27,8 @@ router = APIRouter(
 
 
 @router.post("/create_workout")
-async def add_workout(new_workout: WorkoutCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def add_workout(new_workout: WorkoutCreate, user: User = Depends(current_user),
+                      session: AsyncSession = Depends(get_async_session)):
     stat = insert(Workout).values(**new_workout.dict()).returning(Workout.id)
     result = await session.execute(stat)
     id = result.scalar()
@@ -42,10 +44,19 @@ async def add_video_exercise(
         number_of_sets: int = Form(...),
         maximum_repetitions: int = Form(...),
         rest_time: int = Form(...),
-        video: Optional[str] = Form(...),
+        video: str = Form(None),
         photos: list[UploadFile] = None,
-        user: User = Depends(current_user),
+        # user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
+    print('video', video)
+    # Очистка HTML-кода перед сохранением в базу данных
+    if video:
+        video = bleach.clean(video, tags=['iframe'], attributes={
+            'iframe': ['width', 'height', 'src', 'title', 'frameborder', 'allow', 'allowfullscreen']
+        })
+        print('clean_html_video', video)
+        print('clean_html_video', video[:7])
+        print('clean_html_video', video[-7:])
 
     exercise_data = ExerciseCreate(
         name=name,
@@ -55,6 +66,7 @@ async def add_video_exercise(
         maximum_repetitions=maximum_repetitions,
         rest_time=rest_time,
         video=video
+        # video=clean_html_video
     )
 
     stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
@@ -76,7 +88,8 @@ async def add_video_exercise(
 
 
 @router.post("/create_set")
-async def add_set(number_sets: int, new_set: SetCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def add_set(number_sets: int, new_set: SetCreate, user: User = Depends(current_user),
+                  session: AsyncSession = Depends(get_async_session)):
     for _ in range(number_sets):
         stat = insert(Set).values(**new_set.dict())
         await session.execute(stat)
@@ -85,7 +98,8 @@ async def add_set(number_sets: int, new_set: SetCreate, user: User = Depends(cur
 
 
 @router.post("/add-workout-to-user/{user_id}/{workout_id}")
-async def add_workout_to_user(user_id: int, workout_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def add_workout_to_user(user_id: int, workout_id: int, user: User = Depends(current_user),
+                              session: AsyncSession = Depends(get_async_session)):
     # Проверяем, существует ли уже такая связь
     existing_association = select(added_workouts_association).where(
         (added_workouts_association.c.user_table == user_id) &
@@ -121,9 +135,7 @@ async def get_workouts(
         skip: int = Query(0, description="Number of records to skip"),
         limit: int = Query(12, description="Number of records to return"),
         page: int = Query(1, description="Page number"),
-        # user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
-
     # Нормализация запроса для безопасности (предотвращение SQL-инъекций)
     query_name = f"%{name}%"
 
@@ -168,23 +180,28 @@ async def get_workouts(
 
 
 @router.get("/workout/{workout_id}")
-async def get_one_workout(workout_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_one_workout(workout_id: int, user_id: int = None, session: AsyncSession = Depends(get_async_session)):
     query = (select(Workout).filter(Workout.id == workout_id).
              options(selectinload(Workout.exercise).options(selectinload(Exercise.photo))))
-    # result = await session.execute(query)
     try:
-        # Код, который может вызвать ошибку NoResultFound
+
         result = await session.execute(query)
-        workout = result.mappings().one()
+        workout = work = result.mappings().one()
+        if not work.Workout.is_public and user_id != work.Workout.user_id:
+            raise HTTPException(status_code=403)
+
         return {
             'status': 'success',
             'data': workout,
             'details': None,
         }
+
     except NoResultFound:
         raise HTTPException(status_code=404, detail="This workout not found")
+    except HTTPException as http_error:
+        if http_error.status_code == 403:
+            raise HTTPException(status_code=403, detail="Access denied. Workout is not public")
     except Exception as e:
-        # Обработка других ошибок, если необходимо
         raise HTTPException(status_code=500, detail="Server error")
 
 
@@ -255,11 +272,11 @@ async def get_user_workouts(user_id: int,
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
-    # ПОМЕНЯТЬ ТАБЛИЦУ ОБЩУЮ
     query_name = f"%{name}%"
 
     try:
+        # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
+        # ПОМЕНЯТЬ ТАБЛИЦУ ОБЩУЮ
         query = select(Workout)
         query = query.join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
 
@@ -311,7 +328,9 @@ async def get_difficulty(session: AsyncSession = Depends(get_async_session)):
 
 
 @router.get("/sets")
-async def get_sets(user_id: int, exercise_ids: list[int] = Query(None), user: User = Depends(current_user),  session: AsyncSession = Depends(get_async_session)):
+async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),
+                   # user: User = Depends(current_user),
+                   session: AsyncSession = Depends(get_async_session)):
     # вывод в порядке id
     query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id).order_by(Set.id)
     result = await session.execute(query)
@@ -324,7 +343,8 @@ async def get_sets(user_id: int, exercise_ids: list[int] = Query(None), user: Us
 
 
 @router.patch("/workout/update/{workout_id}")
-async def update_workout(workout_id: int, update_data: WorkoutUpdate, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def update_workout(workout_id: int, update_data: WorkoutUpdate, user: User = Depends(current_user),
+                         session: AsyncSession = Depends(get_async_session)):
     query = update(Workout).filter(Workout.id == workout_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
@@ -337,7 +357,8 @@ async def update_workout(workout_id: int, update_data: WorkoutUpdate, user: User
 
 
 @router.patch("/exercise/update/{exercise_id}")
-async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, user: User = Depends(current_user),
+                          session: AsyncSession = Depends(get_async_session)):
     query = update(Exercise).filter(Exercise.id == exercise_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
@@ -350,7 +371,8 @@ async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, user: U
 
 
 @router.patch("/set/update/{set_id}")
-async def update_set(set_id: int, update_data: SetUpdate, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def update_set(set_id: int, update_data: SetUpdate, user: User = Depends(current_user),
+                     session: AsyncSession = Depends(get_async_session)):
     query = update(Set).filter(Set.id == set_id).values(**update_data.model_dump(exclude_none=True))
 
     await session.execute(query)
@@ -363,25 +385,59 @@ async def update_set(set_id: int, update_data: SetUpdate, user: User = Depends(c
 
 
 @router.delete("/delete/created-workout")
-async def delete_created_workout(workout_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def delete_created_workout(workout_id: int, user: User = Depends(current_user),
+                                 session: AsyncSession = Depends(get_async_session)):
     workout = await session.get(Workout, workout_id)
 
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
 
-    exercises = await session.execute(select(Exercise).filter(Exercise.workout_id == workout_id))
-    exercises_2 = exercises.mappings().all()
-    for exercise in exercises_2:
-        photos_exercise = await session.execute(select(Exercise_photo).filter(Exercise_photo.exercise_id == exercise.Exercise.id))
+    query_exercises = await session.execute(select(Exercise).filter(Exercise.workout_id == workout_id))
+    exercises = query_exercises.mappings().all()
+    for exercise in exercises:
+        photos_exercise = await session.execute(
+            select(Exercise_photo).filter(Exercise_photo.exercise_id == exercise.Exercise.id))
         result_photos_exercise = photos_exercise.mappings().all()
         for photo in result_photos_exercise:
             photo_path = os.path.join(photo.Exercise_photo.photo)
             if os.path.exists(photo_path):
                 os.remove(photo_path)
 
-    workout = delete(Workout).filter(Workout.id == workout_id)
+    del_workout = delete(Workout).filter(Workout.id == workout_id)
 
-    await session.execute(workout)
+    await session.execute(del_workout)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.delete("/delete/exercise")
+async def delete_created_workout(exercise_id: int,
+                                 user: User = Depends(current_user),
+                                 session: AsyncSession = Depends(get_async_session)):
+    exercise = await session.get(Exercise, exercise_id)
+
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+    query_exercise = await session.execute(select(Exercise).filter(Exercise.id == exercise_id))
+    exercise = query_exercise.mappings().one()
+
+    photos_exercise = await session.execute(
+        select(Exercise_photo).filter(Exercise_photo.exercise_id == exercise.Exercise.id))
+    result_photos_exercise = photos_exercise.mappings().all()
+
+    for photo in result_photos_exercise:
+        photo_path = os.path.join(photo.Exercise_photo.photo)
+        if os.path.exists(photo_path):
+            os.remove(photo_path)
+
+    del_exercise = delete(Exercise).filter(Exercise.id == exercise_id)
+
+    await session.execute(del_exercise)
     await session.commit()
 
     return {
@@ -391,7 +447,13 @@ async def delete_created_workout(workout_id: int, user: User = Depends(current_u
 
 
 @router.delete("/delete/added-workout")
-async def delete_added_workout(workout_id: int, user_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def delete_added_workout(workout_id: int, user_id: int, user: User = Depends(current_user),
+                               session: AsyncSession = Depends(get_async_session)):
+    workout = await session.get(Workout, workout_id)
+
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
     query = delete(added_workouts_association).where(
         (added_workouts_association.c.workout_table == workout_id) and
         (added_workouts_association.c.user_table == user_id)
@@ -406,7 +468,8 @@ async def delete_added_workout(workout_id: int, user_id: int, user: User = Depen
 
 
 @router.delete("/delete/added-sets")
-async def delete_added_sets(exercise_id: int, user_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_async_session)):
+async def delete_added_sets(exercise_id: int, user_id: int, user: User = Depends(current_user),
+                            session: AsyncSession = Depends(get_async_session)):
     query = delete(Set).where(
         (Set.exercise_id == exercise_id) and (Set.user_id == user_id)
     )
