@@ -1,7 +1,6 @@
 # Это как сериализаторы и валидаторы
-from datetime import datetime
-
 from pydantic import BaseModel, Field
+from typing import Optional
 
 
 class WorkoutCreate(BaseModel):
@@ -10,7 +9,7 @@ class WorkoutCreate(BaseModel):
     description: str
     is_public: bool
     difficulty: str
-    total_time: str
+    total_time: str  # для дальнейшей разработки
 
 
 class ExerciseCreate(BaseModel):
@@ -20,6 +19,7 @@ class ExerciseCreate(BaseModel):
     number_of_sets: int
     maximum_repetitions: int
     rest_time: int
+    video: Optional[str | None]
 
 
 class SetCreate(BaseModel):
@@ -43,18 +43,9 @@ class ExerciseUpdate(BaseModel):
     number_of_sets: int = None
     maximum_repetitions: int = None
     rest_time: int = None
+    video: str = None
 
 
 class SetUpdate(BaseModel):
     repetition: int = None
     weight: int = None
-
-
-class ExercisePhoto(BaseModel):
-    exercise_id: int = None
-    photo: str = None
-
-
-class ExerciseVideo(BaseModel):
-    exercise_id: int = None
-    video: str = None
