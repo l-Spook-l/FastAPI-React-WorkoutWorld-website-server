@@ -6,18 +6,18 @@ from sqlalchemy.orm.exc import NoResultFound
 from src.database import get_async_session
 from fastapi.exceptions import HTTPException
 from ..auth.base_config import current_user
-from typing import Optional
+from pydantic import ValidationError
 import aiofiles
 from uuid import uuid4
 import os
 import bleach
-
-# router - объединяет несколько endpoints(url)
-# и вызываем в main
 from .models import Workout, Exercise, Set, added_workouts_association, Exercise_photo, DifficultyWorkout
 from ..auth.models import User
 from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
+from .utils import delete_photos
 
+# router - объединяет несколько endpoints(url)
+# и вызываем в main
 router = APIRouter(
     # prefix - url путь
     prefix="/workouts",
@@ -57,34 +57,41 @@ async def add_video_exercise(
         print('clean_html_video', video)
         print('clean_html_video', video[:7])
         print('clean_html_video', video[-7:])
+    try:
+        exercise_data = ExerciseCreate(
+            name=name,
+            workout_id=workout_id,
+            description=description,
+            number_of_sets=number_of_sets,
+            maximum_repetitions=maximum_repetitions,
+            rest_time=rest_time,
+            video=video
+            # video=clean_html_video
+        )
 
-    exercise_data = ExerciseCreate(
-        name=name,
-        workout_id=workout_id,
-        description=description,
-        number_of_sets=number_of_sets,
-        maximum_repetitions=maximum_repetitions,
-        rest_time=rest_time,
-        video=video
-        # video=clean_html_video
-    )
+        stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
+        result = await session.execute(stat)
+        id = result.scalar()
 
-    stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
-    result = await session.execute(stat)
-    id = result.scalar()
+        if photos:
+            for photo in photos:
+                photo.filename = photo.filename.lower()
+                path_photos = f"src/media/Photos_exercise/{id}_{name}_{uuid4()}.png"
+                async with aiofiles.open(path_photos, '+wb') as buffer:
+                    data = await photo.read()
+                    await buffer.write(data)
+                add_photos = insert(Exercise_photo).values(photo=path_photos[4:], exercise_id=id)
+                await session.execute(add_photos)
 
-    if photos:
-        for photo in photos:
-            photo.filename = photo.filename.lower()
-            path_photos = f"src/media/Photos_exercise/{id}_{name}_{uuid4()}.png"
-            async with aiofiles.open(path_photos, '+wb') as buffer:
-                data = await photo.read()
-                await buffer.write(data)
-            add_photos = insert(Exercise_photo).values(photo=path_photos[4:], exercise_id=id)
-            await session.execute(add_photos)
-
-    await session.commit()
-    return {"status": "success", 'exercise_ID': id}
+        await session.commit()
+        return {"status": "success", 'exercise_ID': id}
+    except ValidationError as e:
+        error_messages = []
+        for error in e.errors():
+            field = error['loc'][0]
+            msg = error['msg']
+            error_messages.append(f"Error in field '{field}': {msg}")
+        raise HTTPException(status_code=422, detail=error_messages)
 
 
 @router.post("/create_set")
@@ -112,6 +119,7 @@ async def add_workout_to_user(user_id: int, workout_id: int, user: User = Depend
     query_user = select(User).filter(User.id == user_id)
     result_user = await session.execute(query_user)
     user = result_user.first()
+
     query_workout = select(Workout).filter(Workout.id == workout_id)
     result_workout = await session.execute(query_workout)
     workout = result_workout.first()
@@ -184,7 +192,6 @@ async def get_one_workout(workout_id: int, user_id: int = None, session: AsyncSe
     query = (select(Workout).filter(Workout.id == workout_id).
              options(selectinload(Workout.exercise).options(selectinload(Exercise.photo))))
     try:
-
         result = await session.execute(query)
         workout = work = result.mappings().one()
         if not work.Workout.is_public and user_id != work.Workout.user_id:
@@ -219,10 +226,10 @@ async def get_my_workouts(user_id: int,
 
     try:
         query = select(Workout)
-        # Применяем фильтры
-        if name:  # Выбираем все записи из табл. Workout и по названию
+
+        if name:
             query = query.filter(Workout.name.ilike(query_name))
-        if difficulty:  # Выбираем все записи из табл. Workout и по сложности
+        if difficulty:
             query = query.filter(Workout.difficulty.in_(difficulty))
         if is_public is not None:
             query = query.filter(Workout.is_public == is_public)
@@ -280,16 +287,15 @@ async def get_user_workouts(user_id: int,
         query = select(Workout)
         query = query.join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
 
-        # Применяем фильтры
-        if name:  # Выбираем все записи из табл. Workout и по названию
+        if name:
             query = query.filter(Workout.name.ilike(query_name))
-        if difficulty:  # Выбираем все записи из табл. Workout и по сложности
+        if difficulty:
             query = query.filter(Workout.difficulty.in_(difficulty))
 
         query = query.limit(limit).offset(skip)
         result = await session.execute(query)
         user_workouts = result.mappings().all()
-        # Запрос для общего количества отфильтрованных и отсортированных тренировок
+
         total_count = await session.scalar(
             select(func.count())
             .select_from(Workout).join(added_workouts_association)
@@ -399,7 +405,7 @@ async def delete_created_workout(workout_id: int, user: User = Depends(current_u
             select(Exercise_photo).filter(Exercise_photo.exercise_id == exercise.Exercise.id))
         result_photos_exercise = photos_exercise.mappings().all()
         for photo in result_photos_exercise:
-            photo_path = os.path.join(photo.Exercise_photo.photo)
+            photo_path = os.path.join(f'src/{photo.Exercise_photo.photo}')
             if os.path.exists(photo_path):
                 os.remove(photo_path)
 
@@ -431,7 +437,7 @@ async def delete_created_workout(exercise_id: int,
     result_photos_exercise = photos_exercise.mappings().all()
 
     for photo in result_photos_exercise:
-        photo_path = os.path.join(photo.Exercise_photo.photo)
+        photo_path = os.path.join(f'src/{photo.Exercise_photo.photo}')
         if os.path.exists(photo_path):
             os.remove(photo_path)
 
@@ -467,13 +473,46 @@ async def delete_added_workout(workout_id: int, user_id: int, user: User = Depen
     }
 
 
-@router.delete("/delete/added-sets")
+@router.delete("/delete/sets")
 async def delete_added_sets(exercise_id: int, user_id: int, user: User = Depends(current_user),
                             session: AsyncSession = Depends(get_async_session)):
     query = delete(Set).where(
         (Set.exercise_id == exercise_id) and (Set.user_id == user_id)
     )
     await session.execute(query)
+    await session.commit()
+
+    return {
+        'status': 'success',
+        'details': None,
+    }
+
+
+@router.delete("/delete/photo")
+async def delete_added_sets(exercise_id: int, photo_ids: list[int] = Query(),
+                            # user: User = Depends(current_user),
+                            session: AsyncSession = Depends(get_async_session)):
+    exercise = await session.get(Exercise, exercise_id)
+
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+
+    query_photos = select(Exercise_photo).filter(Exercise_photo.id.in_(photo_ids))
+    result_photos = await session.execute(query_photos)
+    photos = result_photos.mappings().all()
+
+    # await delete_photos(photos)
+    try:
+        for photo in photos:
+            photo_path = f"src/{photo['Exercise_photo'].photo}"
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+        print("Файл успешно удален")
+    except FileNotFoundError:
+        print("Файл не найден")
+
+    del_photos = delete(Exercise_photo).filter(Exercise_photo.id.in_(photo_ids))
+    await session.execute(del_photos)
     await session.commit()
 
     return {
