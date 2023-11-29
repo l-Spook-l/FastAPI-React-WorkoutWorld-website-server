@@ -7,31 +7,44 @@ from fastapi_users import IntegerIDMixin  # для последовательн�
 
 from .models import User
 from .utils import get_user_db
-
-# ключ
-SECRET = "SECRET"
+from fastapi_users.jwt import generate_jwt
+from src.config import SECRET_KEY
 
 
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
-    reset_password_token_secret = SECRET
-    verification_token_secret = SECRET
+    reset_password_token_secret = SECRET_KEY
+    verification_token_secret = SECRET_KEY
 
     # разные фун-ии
     # после регистрации делаем что-то
     async def on_after_register(self, user: User, request: Optional[Request] = None):
         print(f"User {user.id} has registered.")
 
-    # Нужные фун-и, но не сейчас
     # Забыл пароль
+    async def forgot_password(
+        self, user: models.UP, request: Optional[Request] = None
+    ) -> str:
+
+        if not user.is_active:
+            raise exceptions.UserInactive()
+
+        token_data = {
+            "sub": str(user.id),
+            "password_fgpt": self.password_helper.hash(user.hashed_password),
+            "aud": self.reset_password_token_audience,
+        }
+        token = generate_jwt(
+            token_data,
+            self.reset_password_token_secret,
+            self.reset_password_token_lifetime_seconds,
+        )
+        await self.on_after_forgot_password(user, token, request)
+        return token
+
     async def on_after_forgot_password(
             self, user: User, token: str, request: Optional[Request] = None
     ):
-        print(f"User {user.id} has forgot their password. Reset token: {token}")
-    # после запроса верификации
-    # async def on_after_request_verify(
-    #         self, user: User, token: str, request: Optional[Request] = None
-    # ):
-    #     print(f"Verification requested for user {user.id}. Verification token: {token}")
+        print(f"User {user.id}, email {user.email} has forgot their password. Reset token: {token}")
 
     # фун-я из класса BaseUserManager, мы ее немного меняем
     # фун-я создает пользователя

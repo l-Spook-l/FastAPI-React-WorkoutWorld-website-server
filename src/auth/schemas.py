@@ -2,17 +2,18 @@
 from typing import Optional
 
 from fastapi_users import schemas
+from pydantic import Field  # помогает валидировать данные
+from pydantic import BaseModel
 
 
 # был pass, но для понимая пишем то что внутри
 # читаем пользователя
 class UserRead(schemas.BaseUser[int]):
     id: int
-    username: str
     first_name: str
-    second_name: str
-    email: str
-    phone: int
+    last_name: str
+    # email: str
+    phone: str = None
     role_id: int
     is_active: bool = True
     is_superuser: bool = False
@@ -25,17 +26,30 @@ class UserRead(schemas.BaseUser[int]):
 
 # создаем пользователя
 class UserCreate(schemas.BaseUserCreate):
-    username: str
     first_name: str
-    second_name: str
-    email: str
-    phone: int
-    password: str
-    role_id: int
+    last_name: str
+    # email: str
+    phone: str
+    password: str = Field(min_length=8)
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
     is_verified: Optional[bool] = False
 
+
 # если надо обновить
-# class UserUpdate(schemas.BaseUserUpdate):
-#     pass
+# некоторые поля уже есть в BaseUserUpdate
+class UserUpdate(schemas.BaseUserUpdate):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+# Запрос на сброс пароля
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+# Сброс пароля
+class PasswordReset(BaseModel):
+    token: str
+    new_password: str

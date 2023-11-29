@@ -1,21 +1,23 @@
 from fastapi import FastAPI, Request, Depends
 import uvicorn
-from fastapi.exceptions import HTTPException
-
 from src.auth.models import User
 # from .auth.schemas import UserRead, UserCreate, UserUpdate
 # from .auth.base_config import auth_backend, fastapi_users, current_user
 from .auth.base_config import current_user
 from .workouts.router import router as router_workout
 from .auth.router import router as router_user
+from .admin.router import router as router_admin
 from fastapi.staticfiles import StaticFiles
-
 from fastapi.middleware.cors import CORSMiddleware  # для связи с фронтом
 import time
+# from fastadmin import fastapi_app as admin_app
 
 app = FastAPI(
     title="Workout App"
 )
+# app = FastAPI(
+#     title="Workout App",docs_url=None, redoc_url=None
+# )
 
 # @app.middleware("http")
 # async def add_process_time_header(request: Request, call_next):
@@ -26,10 +28,10 @@ app = FastAPI(
 #         data = await request.json()
 #         print('Data sent to server:', data)
 #     except:
-#         print('что о нетак', request)
-#
+#         print('что не нетак', request.json())
 #
 #     response = await call_next(request)
+#     print('res', response)
 #
 #     # process_time = time.time() - start_time
 #     # response.headers["X-Process-Time"] = str(process_time)
@@ -39,6 +41,7 @@ app = FastAPI(
 
 # Подключение media files
 app.mount("/media", StaticFiles(directory="src/media"), name="media")
+# app.mount("/admin", admin_app)
 
 
 @app.get("/protected-route")
@@ -51,6 +54,7 @@ def protected_route(user: User = Depends(current_user)):
 app.include_router(router_user)
 # новый роутер для тренировок
 app.include_router(router_workout)
+app.include_router(router_admin)
 
 
 # CORS

@@ -28,10 +28,10 @@ class User(SQLAlchemyBaseUserTable[int], Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     email: Mapped[str] = mapped_column(nullable=False, unique=True)
+    username: Mapped[str | None] = mapped_column(String(length=255), nullable=True)
     first_name: Mapped[str] = mapped_column(String(length=99), nullable=False)
     last_name: Mapped[str] = mapped_column(String(99), nullable=False)
-    phone: Mapped[int | None] = mapped_column(nullable=False)  # необязательное поле [int | None]
-    username: Mapped[str] = mapped_column(String(99), nullable=False, unique=True)
+    phone: Mapped[str | None] = mapped_column(nullable=False)  # необязательное поле [str | None]
     registered_at: Mapped[datetime] = mapped_column(default=datetime.utcnow())
     role_id: Mapped[int] = mapped_column(ForeignKey("role_table.id"))
 
@@ -46,3 +46,6 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     created_workouts: Mapped[list["Workout"]] = relationship(back_populates="user", cascade="all")
     added_workouts: Mapped[list["Workout"] | None] = relationship(secondary="added_workouts_association", cascade="all")
     set: Mapped[list["Set"]] = relationship(back_populates="user", cascade="all")
+
+    def __str__(self):
+        return self.username

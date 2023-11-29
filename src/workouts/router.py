@@ -52,7 +52,7 @@ async def add_video_exercise(
         rest_time: int = Form(...),
         video: str = Form(None),
         photos: list[UploadFile] = None,
-        # user: User = Depends(current_user),
+        user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
     print('video', video)
     # Очистка HTML-кода перед сохранением в базу данных
@@ -160,7 +160,7 @@ async def add_video_exercise(
         exercise_id: int,
         exercise_name: str,
         photos: list[UploadFile] = None,
-        # user: User = Depends(current_user),
+        user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
     exercise = await session.get(Exercise, exercise_id)
     if not exercise:
@@ -261,8 +261,10 @@ async def get_one_workout(workout_id: int, user_id: int = None, session: AsyncSe
         raise HTTPException(status_code=500, detail="Server error")
 
 
-@router.get("/active-workout/{workout_id}")
-async def get_one_workout(workout_id: int, user_id: int = None, session: AsyncSession = Depends(get_async_session)):
+@router.get("/active-workout")
+async def get_one_workout(workout_id: int, user_id: int,
+                          user: User = Depends(current_user),
+                          session: AsyncSession = Depends(get_async_session)):
     query = (select(Workout).filter(Workout.id == workout_id).
              options(selectinload(Workout.exercise).options(selectinload(Exercise.photo))))
     try:
@@ -424,7 +426,7 @@ async def get_difficulty(session: AsyncSession = Depends(get_async_session)):
 
 @router.get("/sets")
 async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),
-                   # user: User = Depends(current_user),
+                   user: User = Depends(current_user),
                    session: AsyncSession = Depends(get_async_session)):
     # вывод в порядке id
     try:
@@ -633,7 +635,7 @@ async def delete_added_sets(exercise_id: int, user_id: int, user: User = Depends
 
 @router.delete("/delete/photo")
 async def delete_added_sets(exercise_id: int, photo_ids: list[int] = Query(),
-                            # user: User = Depends(current_user),
+                            user: User = Depends(current_user),
                             session: AsyncSession = Depends(get_async_session)):
     exercise = await session.get(Exercise, exercise_id)
 

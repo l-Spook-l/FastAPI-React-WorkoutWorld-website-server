@@ -36,11 +36,9 @@ class Workout(Base):
     is_public: Mapped[bool]
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow())
     difficulty: Mapped[str]
-    # difficulty_id: Mapped[int] = mapped_column(ForeignKey("difficulty_workout_table.id"))
     total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="created_workouts")
-    # difficulty: Mapped["DifficultyWorkout"] = relationship(back_populates="workout")
     exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all, delete-orphan", order_by="Exercise.id")
 
 

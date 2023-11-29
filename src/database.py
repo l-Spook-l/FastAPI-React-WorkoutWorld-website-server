@@ -1,7 +1,7 @@
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import relationship, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.declarative import declarative_base
 
 from .config import DB_NAME, DB_PORT, DB_HOST, DB_PASSWORD, DB_USER
@@ -16,8 +16,8 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_async_engine(DATABASE_URL)  # точка входа sqlalchemy в наше приложение
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+engine = create_async_engine(DATABASE_URL)  # точка входа sqlalchemy в наше приложение (движок)
+async_session_maker = async_sessionmaker(engine, expire_on_commit=False)  # переменная для асинхронных сессий
 
 
 # получение сессий

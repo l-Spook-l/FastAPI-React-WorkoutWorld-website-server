@@ -25,7 +25,7 @@ class ExerciseCreate(BaseModel):
 class SetCreate(BaseModel):
     exercise_id: int
     user_id: int
-    repetition: int = Field(ge=1)
+    repetition: int = Field(ge=0)
     weight: int = Field(ge=0)  # число должно быть >= 0
 
 
@@ -47,5 +47,5 @@ class ExerciseUpdate(BaseModel):
 
 
 class SetUpdate(BaseModel):
-    repetition: Optional[int | None] = Field(ge=1)
-    weight: Optional[int | None] = Field(ge=1)
+    repetition: Optional[int | None] = Field(ge=0)
+    weight: Optional[int | None] = Field(ge=0)
