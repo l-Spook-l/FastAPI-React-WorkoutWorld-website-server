@@ -53,3 +53,9 @@ class PasswordResetRequest(BaseModel):
 class PasswordReset(BaseModel):
     token: str
     new_password: str
+
+
+class SendMessageAdmin(BaseModel):
+    name: str
+    email: str
+    message: str
