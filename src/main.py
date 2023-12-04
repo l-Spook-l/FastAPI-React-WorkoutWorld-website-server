@@ -10,7 +10,6 @@ from .admin.router import router as router_admin
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware  # для связи с фронтом
 import time
-# from fastadmin import fastapi_app as admin_app
 
 app = FastAPI(
     title="Workout App"
@@ -41,12 +40,10 @@ app = FastAPI(
 
 # Подключение media files
 app.mount("/media", StaticFiles(directory="src/media"), name="media")
-# app.mount("/admin", admin_app)
 
 
 @app.get("/protected-route")
 def protected_route(user: User = Depends(current_user)):
-    # return f"Hello, {user.email}"
     return user
 
 
@@ -61,8 +58,7 @@ app.include_router(router_admin)
 # middleware - прослойка между запросом и обработкой (после запроса из фронта и перед обработкой в бэк)
 origins = [
     # адреса фронта
-    "http://localhost",
-    "http://localhost:3000",
+    f"http://localhost:3000",
 ]
 
 app.add_middleware(

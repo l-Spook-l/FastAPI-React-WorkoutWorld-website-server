@@ -10,7 +10,6 @@ from pydantic import ValidationError
 import aiofiles
 from uuid import uuid4
 import os
-import bleach
 from .models import Workout, Exercise, Set, added_workouts_association, Exercise_photo, DifficultyWorkout
 from ..auth.models import User
 from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
@@ -54,15 +53,12 @@ async def add_video_exercise(
         photos: list[UploadFile] = None,
         user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
-    print('video', video)
+
     # Очистка HTML-кода перед сохранением в базу данных
     if video:
-        video = bleach.clean(video, tags=['iframe'], attributes={
-            'iframe': ['width', 'height', 'src', 'title', 'frameborder', 'allow', 'allowfullscreen']
-        })
-        print('clean_html_video', video)
-        print('clean_html_video', video[:7])
-        print('clean_html_video', video[-7:])
+        if video[:7] != '<iframe' or video[-7:] != 'iframe>':
+            video = ''
+
     try:
         exercise_data = ExerciseCreate(
             name=name,
@@ -72,7 +68,6 @@ async def add_video_exercise(
             maximum_repetitions=maximum_repetitions,
             rest_time=rest_time,
             video=video
-            # video=clean_html_video
         )
 
         stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
@@ -470,6 +465,11 @@ async def update_workout(workout_id: int, update_data: WorkoutUpdate, user: User
 @router.patch("/exercise/update/{exercise_id}")
 async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, user: User = Depends(current_user),
                           session: AsyncSession = Depends(get_async_session)):
+    # Очистка HTML-кода перед сохранением в базу данных
+    if update_data.video:
+        if update_data.video[:7] != '<iframe' or update_data.video[-7:] != 'iframe>':
+            update_data.video = ''
+
     try:
         query = update(Exercise).filter(Exercise.id == exercise_id).values(**update_data.model_dump(exclude_none=True))
 
