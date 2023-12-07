@@ -10,8 +10,10 @@ services:
       - 5435
     env_file:  # откуда берем переменные
       - .env-non-dev
-  app:
+
+  server_app:
     build:  # т.к это наш образ
+#      context: ./server dir/  # расположение образа приложения
       context: .  # расположение образа приложения
     env_file:
       - .env-non-dev
@@ -21,7 +23,21 @@ services:
       - 9999:8000
     depends_on:  # что должно быть запущенно перед приложением
       - db
-#  react:
-#    image: react-app  # Имя вашего образа React
+#  client_app:
+#    image: react_app  # Имя вашего образа React
 #    ports:
-#      - "80:80"  # Порт Nginx (React)
+#      - "3000:80"  # Порт Nginx (React)
+  nginx:
+      depends_on:
+          - server_app
+      container_name: proxy_app
+      build:
+#          context: ./client dir/
+          context: ./ui/
+          dockerfile: Dockerfile
+      ports:
+          - 3000:80
+#      restart: always
+
+volumes:
+  pgdata:
