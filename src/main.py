@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware  # для связи с фр�
 import time
 
 app = FastAPI(
+    # openapi_prefix="api",
     title="Workout App"
 )
 # app = FastAPI(
@@ -42,16 +43,16 @@ app = FastAPI(
 app.mount("/media", StaticFiles(directory="src/media"), name="media")
 
 
-@app.get("/protected-route")
+@app.get("/api/protected-route")
 def protected_route(user: User = Depends(current_user)):
     return user
 
 
 # роутер для работы с пользователем
-app.include_router(router_user)
+app.include_router(router_user, prefix="/api")
 # новый роутер для тренировок
-app.include_router(router_workout)
-app.include_router(router_admin)
+app.include_router(router_workout, prefix="/api")
+app.include_router(router_admin, prefix="/api")
 
 
 # CORS
@@ -67,8 +68,9 @@ app.add_middleware(
     allow_credentials=True,  # куки
     # allow_methods=["*"],    # разрешаем все методы (get, post ...) но лучше все самому прописать
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["*"],  # разрешаем все headers (заголовки) но лучше все самому прописать
-    # allow_headers=["Content-Type", "Set-Cookie:", "Authorization", "Access-Control-Allow-Headers"],
+    allow_headers=["*"], # разрешаем все headers (заголовки) но лучше все самому прописать
+    # allow_headers=["Content-Type", "Set-Cookie", "Access-Control-Allow-Headers", "Access-Control-Allow-Origin",
+    #                "Authorization"],
 )
 
 if __name__ == "__main__":
