@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware  # для связи с фр�
 import time
 
 app = FastAPI(
-    # openapi_prefix="api",
     title="Workout App"
 )
 # app = FastAPI(
