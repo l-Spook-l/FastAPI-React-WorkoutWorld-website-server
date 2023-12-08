@@ -1,4 +1,3 @@
-# Это куки и JWT
 from fastapi_users.authentication import BearerTransport, AuthenticationBackend
 from fastapi_users.authentication import JWTStrategy
 
@@ -7,7 +6,7 @@ from src.config import SECRET_KEY
 from .manager import get_user_manager
 from .models import User
 
-# настройка куки
+# Cookie configuration
 bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
 
 
@@ -16,7 +15,7 @@ def get_jwt_strategy() -> JWTStrategy:
     return JWTStrategy(secret=SECRET_KEY, lifetime_seconds=2592000)
 
 
-# авторизация по JWT
+# JWT authentication
 auth_backend = AuthenticationBackend(
     name="jwt",
     transport=bearer_transport,
@@ -28,5 +27,5 @@ fastapi_users = FastAPIUsers[User, int](
     [auth_backend],
 )
 
-# получаем пользователя
+# Getting the user
 current_user = fastapi_users.current_user()

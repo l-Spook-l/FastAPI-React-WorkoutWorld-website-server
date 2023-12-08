@@ -1,4 +1,3 @@
-# Это как сериализаторы и валидаторы
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -9,7 +8,7 @@ class WorkoutCreate(BaseModel):
     description: str
     is_public: bool
     difficulty: str
-    total_time: str  # для дальнейшей разработки
+    total_time: str
 
 
 class ExerciseCreate(BaseModel):
@@ -26,7 +25,7 @@ class SetCreate(BaseModel):
     exercise_id: int
     user_id: int
     repetition: int = Field(ge=0)
-    weight: int = Field(ge=0)  # число должно быть >= 0
+    weight: int = Field(ge=0)
 
 
 class WorkoutUpdate(BaseModel):

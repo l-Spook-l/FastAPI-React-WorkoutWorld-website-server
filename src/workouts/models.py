@@ -1,29 +1,19 @@
-# Ну это модели
-from __future__ import annotations  # делает ненужным импорт моделей
+from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON, TIMESTAMP, Boolean, Table
+from sqlalchemy import Column, String, ForeignKey, Table
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.database import Base
 
-# from src.auth.models import User
 
-# added_workouts_association.c.user_table - доступ к полю
 added_workouts_association = Table(
     "added_workouts_association",
     Base.metadata,
     Column("workout_table", ForeignKey("workout_table.id")),
     Column("user_table", ForeignKey("user_table.id")),
 )
-
-# photo_for_exercise = Table(
-#     "photos_for_exercise",
-#     Base.metadata,
-#     Column("exercise_photo_table", ForeignKey("exercise_photo_table.id")),
-#     Column("exercise_table", ForeignKey("exercise_table.id")),
-# )
 
 
 class Workout(Base):
@@ -54,7 +44,6 @@ class Exercise(Base):
     rest_time: Mapped[int | None]
     video: Mapped[str | None]
 
-    # exercise = это поле в Workout и так же в других случаях
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
     photo: Mapped[list["Exercise_photo"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
@@ -73,7 +62,7 @@ class Set(Base):
     user: Mapped["User"] = relationship(back_populates="set")
 
 
-class Exercise_photo(Base):  # и из папки тоже удалять при удалении
+class Exercise_photo(Base):
     __tablename__ = "exercise_photo_table"
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercise_table.id", ondelete="CASCADE"))
@@ -86,5 +75,3 @@ class DifficultyWorkout(Base):
     __tablename__ = "difficulty_workout_table"
     id: Mapped[int] = mapped_column(primary_key=True, index=True, unique=True)
     difficulty: Mapped[str]
-
-    # workout: Mapped[list["Workout"]] = relationship(back_populates="difficulty")

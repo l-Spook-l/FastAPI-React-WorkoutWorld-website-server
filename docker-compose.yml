@@ -1,43 +1,37 @@
 version: "3.7"
 services:
   db:
-    image: postgres:15.3-alpine3.18  # уже созданные образ
+    image: postgres:15.3-alpine3.18
     container_name: db_app
     command: -p 5435
     volumes:
       - pgdata:/var/lib/postgresql/data
     expose:
       - 5435
-    env_file:  # откуда берем переменные
+    env_file:
       - .env-non-dev
 
   server_app:
-    build:  # т.к это наш образ
-#      context: ./server dir/  # расположение образа приложения
-      context: .  # расположение образа приложения
+    build:
+      context: ./server dir/
     env_file:
       - .env-non-dev
     container_name: fastapi_app
-    command: ["/fastapi_app/docker/app.sh"]  # для реализации скриптов
+    command: ["/fastapi_app/docker/app.sh"]
     ports:
       - 9999:8000
-    depends_on:  # что должно быть запущенно перед приложением
+    depends_on:
       - db
-#  client_app:
-#    image: react_app  # Имя вашего образа React
-#    ports:
-#      - "3000:80"  # Порт Nginx (React)
+
   nginx:
       depends_on:
           - server_app
       container_name: proxy_app
       build:
-#          context: ./client dir/
-          context: ./ui/
+          context: ./client dir/
           dockerfile: Dockerfile
       ports:
           - 3000:80
-#      restart: always
 
 volumes:
   pgdata:

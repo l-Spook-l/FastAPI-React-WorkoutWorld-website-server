@@ -1,9 +1,8 @@
-# КОД ИЗ ДОКУМЕНТАЦИИ только поменял - IntegerIDMixin
 from typing import Optional
 
 from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, exceptions, models, schemas
-from fastapi_users import IntegerIDMixin  # для последовательного id для пользователя
+from fastapi_users import IntegerIDMixin
 
 from .models import User
 from .utils import get_user_db
@@ -15,10 +14,8 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET_KEY
     verification_token_secret = SECRET_KEY
 
-    # разные фун-ии
-    # после регистрации делаем что-то
-    async def on_after_register(self, user: User, request: Optional[Request] = None):
-        print(f"User {user.id} has registered.")
+    # async def on_after_register(self, user: User, request: Optional[Request] = None):
+    #     print(f"User {user.id} has registered.")
 
     # Забыл пароль
     async def forgot_password(
@@ -41,13 +38,12 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         await self.on_after_forgot_password(user, token, request)
         return token
 
-    async def on_after_forgot_password(
-            self, user: User, token: str, request: Optional[Request] = None
-    ):
-        print(f"User {user.id}, email {user.email} has forgot their password. Reset token: {token}")
+    # async def on_after_forgot_password(
+    #         self, user: User, token: str, request: Optional[Request] = None
+    # ):
+    #     print(f"User {user.id}, email {user.email} has forgot their password. Reset token: {token}")
 
-    # фун-я из класса BaseUserManager, мы ее немного меняем
-    # фун-я создает пользователя
+    # The function creates a user
     async def create(
             self,
             user_create: schemas.UC,
@@ -67,7 +63,9 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         )
         password = user_dict.pop("password")
         user_dict["hashed_password"] = self.password_helper.hash(password)
-        user_dict["role_id"] = 2  # при регистрации выставляем пользователю 2ю роль
+
+        # When registering, assign the user a second role.
+        user_dict["role_id"] = 2
 
         created_user = await self.user_db.create(user_dict)
 

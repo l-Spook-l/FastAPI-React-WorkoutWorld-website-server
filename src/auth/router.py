@@ -13,19 +13,19 @@ import time
 last_sent_time = 0
 router = APIRouter()
 
-# авторизация
+# Authorization
 router.include_router(
     fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"],
 )
-# регистрация
+# Registration
 router.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"],
 )
-# сброс пароля
+# Password reset
 router.include_router(
     fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"],
 )
-# Обновление данных о пользователе
+# User data update
 router.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"],
 )

@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, Form
-from sqlalchemy import select, insert, update, func, delete
+from fastapi import APIRouter, Depends
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.exc import NoResultFound
 from ..auth.models import User, Role
@@ -10,9 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 
 router = APIRouter(
-    # prefix - url путь
     prefix="/admin",
-    # tags - группа к которой он относиться
     tags=["Admin"]
 )
 

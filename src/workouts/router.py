@@ -14,12 +14,8 @@ from .models import Workout, Exercise, Set, added_workouts_association, Exercise
 from ..auth.models import User
 from .schemas import WorkoutCreate, ExerciseCreate, SetCreate, WorkoutUpdate, ExerciseUpdate, SetUpdate
 
-# router - объединяет несколько endpoints(url)
-# и вызываем в main
 router = APIRouter(
-    # prefix - url путь
     prefix="/workouts",
-    # tags - группа к которой он относиться
     tags=["Workout"]
 )
 
@@ -41,7 +37,7 @@ async def add_workout(new_workout: WorkoutCreate, user: User = Depends(current_u
         })
 
 
-@router.post("/create_exercise")  # 19:00 номер видео 4
+@router.post("/create_exercise")
 async def add_video_exercise(
         name: str = Form(...),
         workout_id: int = Form(...),
@@ -54,7 +50,6 @@ async def add_video_exercise(
         user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
 
-    # Очистка HTML-кода перед сохранением в базу данных
     if video:
         if video[:7] != '<iframe' or video[-7:] != 'iframe>':
             video = ''
@@ -115,7 +110,6 @@ async def add_set(number_sets: int, new_set: SetCreate, user: User = Depends(cur
 @router.post("/add-workout-to-user/{user_id}/{workout_id}")
 async def add_workout_to_user(user_id: int, workout_id: int, user: User = Depends(current_user),
                               session: AsyncSession = Depends(get_async_session)):
-    # Проверяем, существует ли уже такая связь
     existing_association = select(added_workouts_association).where(
         (added_workouts_association.c.user_table == user_id) &
         (added_workouts_association.c.workout_table == workout_id)
@@ -136,7 +130,6 @@ async def add_workout_to_user(user_id: int, workout_id: int, user: User = Depend
         if not user or not workout:
             raise HTTPException(status_code=404, detail="User or Workout not found")
 
-        # Создаем новую связь
         new_association = insert(added_workouts_association).values(user_table=user_id, workout_table=workout_id)
         await session.execute(new_association)
         await session.commit()
@@ -179,7 +172,6 @@ async def add_video_exercise(
         raise HTTPException(status_code=422, detail=e)
 
 
-# response_model - для лучшей документации
 @router.get("/")
 async def get_workouts(
         name: str = Query(None, description="Filter by name"),
@@ -188,23 +180,19 @@ async def get_workouts(
         limit: int = Query(12, description="Number of records to return"),
         page: int = Query(1, description="Page number"),
         session: AsyncSession = Depends(get_async_session)):
-    # Нормализация запроса для безопасности (предотвращение SQL-инъекций)
+
+    # Normalizing the query for security (preventing SQL injections)
     query_name = f"%{name}%"
 
     try:
-        # Создаем базовый запрос
         query = select(Workout)
-        # Применяем фильтры, если они предоставлены в name или difficulty
-        if name:  # Выбираем все записи из табл. Workout и по названию
+        if name:
             query = query.filter(Workout.name.ilike(query_name))
-        if difficulty:  # Выбираем все записи из табл. Workout и по сложности
+        if difficulty:
             query = query.filter(Workout.difficulty.in_(difficulty))
 
-        # добавляем лимиты и сортировку по полю is_public если оно True
         query = query.limit(limit).offset(skip).filter(Workout.is_public)
-        # делаем запрос в БД
         result = await session.execute(query)
-        # подсчет общего количества записей
         total_count = await session.scalar(
             select(func.count())
             .select_from(Workout)
@@ -212,7 +200,6 @@ async def get_workouts(
             .filter(Workout.name.ilike(query_name) if name else True)
             .filter(Workout.difficulty.in_(difficulty) if difficulty else True)
         )
-        # получаем список из словарей
         workouts = result.mappings().all()
 
         return {
@@ -317,7 +304,6 @@ async def get_my_workouts(user_id: int,
         query = query.filter(Workout.user_id == user_id).limit(limit).offset(skip)
         result = await session.execute(query)
         my_workouts = result.mappings().all()
-        # Запрос для общего количества отфильтрованных и отсортированных тренировок
         total_count = await session.scalar(
             select(func.count())
             .select_from(Workout)
@@ -362,7 +348,6 @@ async def get_user_workouts(user_id: int,
     query_name = f"%{name}%"
 
     try:
-        # Используем SQLAlchemy запрос для получения связанных тренировок пользователя
         query = select(Workout)
         query = query.join(added_workouts_association).filter(added_workouts_association.c.user_table == user_id)
 
@@ -423,7 +408,6 @@ async def get_difficulty(session: AsyncSession = Depends(get_async_session)):
 async def get_sets(user_id: int, exercise_ids: list[int] = Query(None),
                    user: User = Depends(current_user),
                    session: AsyncSession = Depends(get_async_session)):
-    # вывод в порядке id
     try:
         query = select(Set).filter(Set.exercise_id.in_(exercise_ids)).filter(Set.user_id == user_id).order_by(Set.id)
         result = await session.execute(query)
@@ -465,7 +449,6 @@ async def update_workout(workout_id: int, update_data: WorkoutUpdate, user: User
 @router.patch("/exercise/update/{exercise_id}")
 async def update_exercise(exercise_id: int, update_data: ExerciseUpdate, user: User = Depends(current_user),
                           session: AsyncSession = Depends(get_async_session)):
-    # Очистка HTML-кода перед сохранением в базу данных
     if update_data.video:
         if update_data.video[:7] != '<iframe' or update_data.video[-7:] != 'iframe>':
             update_data.video = ''
@@ -642,7 +625,6 @@ async def delete_added_sets(exercise_id: int, photo_ids: list[int] = Query(),
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
 
-    # await delete_photos(photos)
     try:
         query_photos = select(Exercise_photo).filter(Exercise_photo.id.in_(photo_ids))
         result_photos = await session.execute(query_photos)

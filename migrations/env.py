@@ -7,7 +7,8 @@ from alembic import context
 
 from src.config import DB_NAME, DB_PORT, DB_HOST, DB_PASSWORD, DB_USER
 from src.database import Base
-# модели обязательны для того чтобы они были видны при миграции
+
+# Models need to be present to be visible during migration.
 from src.auth.models import Role, User
 from src.workouts.models import Workout, Exercise, Set, DifficultyWorkout
 

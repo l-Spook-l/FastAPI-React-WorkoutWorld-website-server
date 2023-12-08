@@ -1,13 +1,10 @@
-# Это как сериализаторы и валидаторы
 from typing import Optional
 
 from fastapi_users import schemas
-from pydantic import Field  # помогает валидировать данные
+from pydantic import Field
 from pydantic import BaseModel
 
 
-# был pass, но для понимая пишем то что внутри
-# читаем пользователя
 class UserRead(schemas.BaseUser[int]):
     id: int
     first_name: str
@@ -24,7 +21,6 @@ class UserRead(schemas.BaseUser[int]):
         from_attributes = True
 
 
-# создаем пользователя
 class UserCreate(schemas.BaseUserCreate):
     first_name: str
     last_name: str
@@ -36,20 +32,16 @@ class UserCreate(schemas.BaseUserCreate):
     is_verified: Optional[bool] = False
 
 
-# если надо обновить
-# некоторые поля уже есть в BaseUserUpdate
 class UserUpdate(schemas.BaseUserUpdate):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
 
 
-# Запрос на сброс пароля
 class PasswordResetRequest(BaseModel):
     email: str
 
 
-# Сброс пароля
 class PasswordReset(BaseModel):
     token: str
     new_password: str
