@@ -27,7 +27,6 @@ app.include_router(router_admin, prefix="/api")
 
 # CORS
 origins = [
-    # адреса фронта
     f"http://localhost:3000",
 ]
 

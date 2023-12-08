@@ -22,7 +22,7 @@ async def send_token_by_email(email, token):
     message = EmailMessage()
     message["From"] = sender
     message["To"] = recipient
-    message["Subject"] = "Тестовая тема"
+    message["Subject"] = "Password recovery"
     message.set_content(f"Hello, you have requested a password reset. Please follow the link to set a new password. "
                         f"If this wasn't you, please disregard this message http://{CLIENT_IP}:{CLIENT_PORT}/reset-password/"
                         f"{token}")

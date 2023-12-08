@@ -14,10 +14,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET_KEY
     verification_token_secret = SECRET_KEY
 
-    # async def on_after_register(self, user: User, request: Optional[Request] = None):
-    #     print(f"User {user.id} has registered.")
-
-    # Забыл пароль
     async def forgot_password(
         self, user: models.UP, request: Optional[Request] = None
     ) -> str:
@@ -37,11 +33,6 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
         )
         await self.on_after_forgot_password(user, token, request)
         return token
-
-    # async def on_after_forgot_password(
-    #         self, user: User, token: str, request: Optional[Request] = None
-    # ):
-    #     print(f"User {user.id}, email {user.email} has forgot their password. Reset token: {token}")
 
     # The function creates a user
     async def create(
