@@ -22,8 +22,8 @@ async def send_token_by_email(email, token):
     sender = SMTP_USER_EMAIL
 
     # Адрес электронной почты, на который вы хотите отправить сообщение
-    # recipient = email
-    recipient = SMTP_USER_EMAIL
+    recipient = email
+    # recipient = SMTP_USER_EMAIL
 
     # Это пароль для созданного приложения в почте
     password = SMTP_PASSWORD
