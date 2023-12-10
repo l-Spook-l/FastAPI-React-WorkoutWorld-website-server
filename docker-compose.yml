@@ -9,29 +9,51 @@ services:
     expose:
       - 5435
     env_file:
-      - .env-non-dev
+      - ./FastAPI-React-WorkoutWorld-website-server/.env-non-dev
+    networks:
+      - mynetwork
 
   server_app:
     build:
-      context: ./server dir/
+      context: ./FastAPI-React-WorkoutWorld-website-server/
     env_file:
-      - .env-non-dev
+      - ./FastAPI-React-WorkoutWorld-website-server/.env-non-dev
     container_name: fastapi_app
     command: ["/fastapi_app/docker/app.sh"]
     ports:
       - 9999:8000
+    networks:
+      - mynetwork
     depends_on:
       - db
 
   nginx:
-      depends_on:
-          - server_app
-      container_name: proxy_app
-      build:
-          context: ./client dir/
-          dockerfile: Dockerfile
-      ports:
-          - 3000:80
+    image: lspookl/react_app
+    depends_on:
+        - server_app
+    container_name: client_react_app
+    ports:
+        - 3000:80
+    volumes:
+      - etc-letsencrypt:/etc/letsencrypt
+    networks:
+        - mynetwork
+
+  certbot:
+    image: certbot/certbot
+    depends_on:
+      - nginx
+    container_name: certbot
+    volumes:
+      - etc-letsencrypt:/etc/letsencrypt
+      - www-html:/var/www/html
+    command: certonly --webroot --webroot-path=/var/www/html --email uaspookua@gmail.com --agree-tos --no-eff-email -d vm4791907.25ssd.had.wf
+
+networks:
+  mynetwork:
+    driver: bridge
 
 volumes:
   pgdata:
+  www-html:
+  etc-letsencrypt:

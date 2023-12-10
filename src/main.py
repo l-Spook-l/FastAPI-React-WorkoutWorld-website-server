@@ -28,6 +28,10 @@ app.include_router(router_admin, prefix="/api")
 # CORS
 origins = [
     f"http://localhost:3000",
+    f"http://45.137.66.74:3000",
+    f"https://45.137.66.74:3000",
+    f"http://vm4791907.25ssd.had.wf",
+    f"https://vm4791907.25ssd.had.wf",
 ]
 
 app.add_middleware(

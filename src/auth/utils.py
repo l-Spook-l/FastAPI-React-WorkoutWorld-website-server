@@ -16,6 +16,7 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
 
 
 async def send_token_by_email(email, token):
+    client_ip = f'http://{CLIENT_IP}:{CLIENT_PORT}'
     sender = SMTP_USER_EMAIL
     recipient = email
     password = SMTP_PASSWORD
@@ -24,7 +25,7 @@ async def send_token_by_email(email, token):
     message["To"] = recipient
     message["Subject"] = "Password recovery"
     message.set_content(f"Hello, you have requested a password reset. Please follow the link to set a new password. "
-                        f"If this wasn't you, please disregard this message http://{CLIENT_IP}:{CLIENT_PORT}/reset-password/"
+                        f"If this wasn't you, please disregard this message {client_ip}/reset-password/"
                         f"{token}")
 
     await aiosmtplib.send(message, hostname="smtp.gmail.com", port=465, use_tls=True, username=sender,
