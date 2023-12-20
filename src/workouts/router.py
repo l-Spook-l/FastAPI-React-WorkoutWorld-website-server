@@ -47,9 +47,9 @@ async def add_video_exercise(
         rest_time: int = Form(...),
         video: str = Form(None),
         photos: list[UploadFile] = None,
+        number_in_workout: int = Form(...),
         user: User = Depends(current_user),
         session: AsyncSession = Depends(get_async_session)):
-
     if video:
         if video[:7] != '<iframe' or video[-7:] != 'iframe>':
             video = ''
@@ -62,7 +62,8 @@ async def add_video_exercise(
             number_of_sets=number_of_sets,
             maximum_repetitions=maximum_repetitions,
             rest_time=rest_time,
-            video=video
+            video=video,
+            number_in_workout=number_in_workout,
         )
 
         stat = insert(Exercise).values(**exercise_data.model_dump(exclude_none=True)).returning(Exercise.id)
@@ -180,7 +181,6 @@ async def get_workouts(
         limit: int = Query(12, description="Number of records to return"),
         page: int = Query(1, description="Page number"),
         session: AsyncSession = Depends(get_async_session)):
-
     # Normalizing the query for security (preventing SQL injections)
     query_name = f"%{name}%"
 
@@ -255,7 +255,7 @@ async def get_one_workout(workout_id: int, user_id: int,
 
         association_query = (select(added_workouts_association)
                              .filter(added_workouts_association.c.workout_table == workout_id,
-                             added_workouts_association.c.user_table == user_id))
+                                     added_workouts_association.c.user_table == user_id))
         association_query_result = await session.execute(association_query)
 
         if not workout_check.Workout.is_public and user_id != workout_check.Workout.user_id:
