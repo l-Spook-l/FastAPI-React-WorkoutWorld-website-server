@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from src.database import Base
 
-
 added_workouts_association = Table(
     "added_workouts_association",
     Base.metadata,
@@ -29,7 +28,8 @@ class Workout(Base):
     total_time: Mapped[str] = mapped_column(String(length=999))
 
     user: Mapped["User"] = relationship(back_populates="created_workouts")
-    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all, delete-orphan", order_by="Exercise.id")
+    exercise: Mapped[list["Exercise"]] = relationship(back_populates="workout", cascade="all, delete-orphan",
+                                                      order_by="Exercise.number_in_workout")
 
 
 class Exercise(Base):
@@ -43,6 +43,7 @@ class Exercise(Base):
     maximum_repetitions: Mapped[int]
     rest_time: Mapped[int | None]
     video: Mapped[str | None]
+    number_in_workout: Mapped[int | None]
 
     workout: Mapped["Workout"] = relationship(back_populates="exercise")
     set: Mapped[list["Set"]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
