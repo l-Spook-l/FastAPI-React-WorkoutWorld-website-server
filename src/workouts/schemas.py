@@ -19,6 +19,7 @@ class ExerciseCreate(BaseModel):
     maximum_repetitions: int = Field(ge=1)
     rest_time: int = Field(ge=1)
     video: Optional[str | None]
+    number_in_workout: int
 
 
 class SetCreate(BaseModel):
